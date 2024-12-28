@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>reQuote_v4</title>
+</head>
+<body>
+    <h1>Welcome to reQuote v_4 with updated signup</h1>
+
+    <!-- Authentication Section -->
+    <div id="auth-section">
+
+        <!-- Updated Signup Form -->
+        <h2>Sign Up</h2>
+        <form id="signup-form">
+            <input type="text" id="signup-email" placeholder="Email" required>
+            <input type="password" id="signup-password" placeholder="Password" required>
+            <button type="submit">Sign Up</button>
+        </form>
+
+        <!-- Updated Login Form -->
+        <h2>Login</h2>
+        <form id="login-form">
+            <input type="text" id="login-email" placeholder="Email" required>
+            <input type="password" id="login-password" placeholder="Password" required>
+            <button type="submit">Login</button>
+        </form>
+
+    </div>
+
+    <!-- Quotes Section -->
+    <div id="quotes-section" style="display: none;">
+        <h2>Quotes</h2>
+        <form id="add-quote-form">
+            <input type="text" id="quote-content" placeholder="Quote" required>
+            <input type="text" id="quote-author" placeholder="Author" required>
+            <input type="text" id="quote-tag" placeholder="Tag" required>
+            <button type="submit">Add Quote</button>
+        </form>
+        <ul id="quotes-list"></ul>
+    </div>
+
+    <script>
+        const authSection = document.getElementById('auth-section');
+        const quotesSection = document.getElementById('quotes-section');
+        const signupForm = document.getElementById('signup-form');
+        const loginForm = document.getElementById('login-form');
+        const addQuoteForm = document.getElementById('add-quote-form');
+        const quotesList = document.getElementById('quotes-list');
+
+        let token = null;
+
+addQuoteForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const content = document.getElementById('quote-content').value;
+    const author = document.getElementById('quote-author').value;
+    const tag = document.getElementById('quote-tag').value;
+
+    try {
+        const response = await fetch('/api/quotes', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`, // Include the token
+            },
+            body: JSON.stringify({ content, author, tag }),
+        });
+
+        if (response.ok) {
+            alert('Quote added successfully!');
+            addQuoteForm.reset(); // Clear the form
+            loadQuotes(); // Reload the quotes list to show the new quote
+        } else {
+            const data = await response.json();
+            alert(`Failed to add quote: ${data.message}`);
+        }
+    } catch (error) {
+        console.error('Error adding quote (frontend):', error);
+        alert('Failed to add quote (frontend).');
+    }
+});
+
+
+
+ // Define the loadQuotes function
+    async function loadQuotes() {
+        try {
+            const response = await fetch('/api/quotes', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (response.ok) {
+                const quotes = await response.json();
+                quotesList.innerHTML = ''; // Clear the list before updating
+                quotes.forEach((quote) => {
+                    const li = document.createElement('li');
+                    li.textContent = `"${quote.content}" - ${quote.author} [${quote.tag}]`;
+                    quotesList.appendChild(li);
+                });
+            } else {
+                const data = await response.json();
+                alert(`Failed to load quotes: ${data.message}`);
+            }
+        } catch (error) {
+            console.error('Error loading quotes (frontend):', error);
+            alert('Failed to load quotes (frontend).');
+        }
+    }
+
+        // Updated Signup Logic
+        signupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+
+            try {
+                const response = await fetch('/api/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                if (response.ok) {
+                    alert('Sign-up successful! Please log in.');
+                    signupForm.reset();
+                } else {
+                    const data = await response.json();
+                    alert(`Sign-up failed: ${data.message}`);
+                }
+            } catch (error) {
+                console.error("Error during sign-up:", error);
+                alert('Sign-up failed.');
+            }
+        });
+
+        // Updated Login Logic
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    token = data.token;
+                    alert('Login successful!');
+                    authSection.style.display = 'none';
+                    quotesSection.style.display = 'block';
+                    loadQuotes();
+                } else {
+                    const data = await response.json();
+                    alert(`Login failed: ${data.message}`);
+                }
+            } catch (error) {
+                console.error("Error during login:", error);
+                alert('Login failed.');
+            }
+        });
+    </script>
+</body>
+</html>
