@@ -163,6 +163,27 @@ app.post('/quotes', authenticate, async (req, res) => {
     }
 });
 
+//Delete Quote by User
+
+app.delete('/quotes/:id', authenticate, async (req, res) => {
+    console.log('Delete request received for ID:', req.params.id); // Log the ID
+    console.log('Authenticated user ID:', req.userId); // Log the user ID
+    try {
+        const quoteId = req.params.id;
+        const deletedQuote = await Quote.findOneAndDelete({ _id: quoteId, user: req.userId });
+
+        if (!deletedQuote) {
+            return res.status(404).json({ message: 'Quote not found or not authorized to delete' });
+        }
+
+        res.status(200).json({ message: 'Quote deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting quote:', error);
+        res.status(500).json({ message: 'Failed to delete quote (backend)' });
+    }
+});
+
+
 // Get Quotes by User
 app.get('/quotes', authenticate, async (req, res) => {
     try {
