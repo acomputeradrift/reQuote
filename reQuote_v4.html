@@ -154,7 +154,7 @@ addQuoteForm.addEventListener('submit', async (e) => {
                 if (response.ok) {
                     const data = await response.json();
                     token = data.token;
-                    alert('Login successful!');
+                    alert(`Login successful! Welcome ${data.email}!`);
                     authSection.style.display = 'none';
                     quotesSection.style.display = 'block';
                     loadQuotes();

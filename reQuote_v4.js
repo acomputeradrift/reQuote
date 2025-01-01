@@ -100,8 +100,7 @@ app.post('/signup', async (req, res) => {
         res.status(500).json({ message: 'Error signing up', error });
     }
 });
-
-// Login
+// Updated Login
 app.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
@@ -112,12 +111,34 @@ app.post('/login', async (req, res) => {
         const match = await bcrypt.compare(password, user.password);
         if (!match) return res.status(400).json({ message: 'Invalid email or password' });
 
-        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-        res.status(200).json({ message: 'Login successful', token });
+        // Include email in the token payload
+        const token = jwt.sign({ userId: user._id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+        // Send token and email back to the frontend
+        res.status(200).json({ message: 'Login successful', token, email: user.email });
     } catch (error) {
+        console.error('Error during login:', error);
         res.status(500).json({ message: 'Error logging in', error });
     }
 });
+
+// Login
+// app.post('/login', async (req, res) => {
+//     const { email, password } = req.body;
+
+//     try {
+//         const user = await User.findOne({ email });
+//         if (!user) return res.status(400).json({ message: 'Invalid email or password' });
+
+//         const match = await bcrypt.compare(password, user.password);
+//         if (!match) return res.status(400).json({ message: 'Invalid email or password' });
+
+//         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+//         res.status(200).json({ message: 'Login successful', token });
+//     } catch (error) {
+//         res.status(500).json({ message: 'Error logging in', error });
+//     }
+// });
 
 // Add Quote
 app.post('/quotes', authenticate, async (req, res) => {
