@@ -23,12 +23,12 @@ app.use(express.json());
     }
 })();
 
-
-// Schemas and Models
+//----------------------------------------------------------- Schemas and Models
 const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     confirmed: { type: Boolean, default: false },
+    selectedQuotes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Quote' }] // Array of selected quotes
 });
 
 const quoteSchema = new mongoose.Schema({
@@ -41,7 +41,7 @@ const quoteSchema = new mongoose.Schema({
 const User = mongoose.model('User', userSchema);
 const Quote = mongoose.model('Quote', quoteSchema);
 
-// Authentication Middleware
+//-------------------------------------------------------- Authentication Middleware
 const authenticate = async (req, res, next) => {
     const token = req.headers.authorization?.split(' ')[1];
     console.log('Received token:', token);
@@ -56,9 +56,9 @@ const authenticate = async (req, res, next) => {
     }
 };
 
-// Routes
+//---------------------------------------------------------------- Routes
 
-// Sign Up
+//Sign Up
 app.post('/signup', async (req, res) => {
     const { email, password } = req.body;
 
@@ -86,7 +86,7 @@ app.post('/signup', async (req, res) => {
         res.status(500).json({ message: 'Error signing up', error });
     }
 });
-// Updated Login
+//Login
 app.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
@@ -108,8 +108,7 @@ app.post('/login', async (req, res) => {
     }
 });
 
-// Updated Add Quote
-
+//Add Quote
 app.post('/quotes', authenticate, async (req, res) => {
     const { content, author } = req.body;
 
@@ -137,31 +136,7 @@ app.post('/quotes', authenticate, async (req, res) => {
     }
 });
 
-
-// Add Quote
-// app.post('/quotes', authenticate, async (req, res) => {
-//     const { content, author } = req.body;
-
-//     if (!content || !author) {
-//         return res.status(400).json({ message: 'All fields are required' });
-//     }
-
-//     try {
-//         const quote = new Quote({
-//             content,
-//             author,
-//             user: req.userId, // Associate the quote with the logged-in user
-//         });
-//         await quote.save();
-//         res.status(201).json({ message: 'Quote added successfully', quote });
-//     } catch (error) {
-//         console.error('Error adding quote (backend):', error);
-//         res.status(500).json({ message: 'Failed to add quote (backend)' });
-//     }
-// });
-
-//reorder Quotes
-
+//Reorder Quotes
 app.post('/quotes/reorder', authenticate, async (req, res) => {
     const updates = req.body; // Array of { id, order }
     console.log('Reorder updates received:', updates);
@@ -178,9 +153,7 @@ app.post('/quotes/reorder', authenticate, async (req, res) => {
     }
 });
 
-
 //Delete Quote by User
-
 app.delete('/quotes/:id', authenticate, async (req, res) => {
     console.log('Delete request received for ID:', req.params.id); // Log the ID
     console.log('Authenticated user ID:', req.userId); // Log the user ID
@@ -199,8 +172,7 @@ app.delete('/quotes/:id', authenticate, async (req, res) => {
     }
 });
 
-
-// Get Quotes by User
+//Get Quotes by User
 app.get('/quotes', authenticate, async (req, res) => {
     try {
         const quotes = await Quote.find({ user: req.userId }).sort({ order: 1 });
@@ -210,7 +182,49 @@ app.get('/quotes', authenticate, async (req, res) => {
     }
 });
 
-// Search Quotes by Other Users
+//Update Selected Quotes
+app.post('/quotes/selected', authenticate, async (req, res) => {
+    const { selectedQuotes } = req.body;
+
+    if (!Array.isArray(selectedQuotes) || selectedQuotes.length > 21) {
+        return res.status(400).json({ message: 'You must select between 1 and 21 quotes.' });
+    }
+
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Update the selected quotes for the user
+        user.selectedQuotes = selectedQuotes;
+        await user.save();
+
+        res.status(200).json({ message: 'Selected quotes updated successfully.' });
+    } catch (error) {
+        console.error('Error updating selected quotes:', error);
+        res.status(500).json({ message: 'Failed to update selected quotes.' });
+    }
+});
+
+//Fetch Selected Quotes
+app.get('/quotes/selected', authenticate, async (req, res) => {
+    try {
+        console.log('Fetching selected quotes'); // Log the request
+
+        const user = await User.findById(req.userId).populate('selectedQuotes');
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        res.status(200).json({ selectedQuotes: user.selectedQuotes.map((quote) => quote._id) });
+    } catch (error) {
+        console.error('Error fetching selected quotes:', error);
+        res.status(500).json({ message: 'Failed to fetch selected quotes.' });
+    }
+});
+
+//Search Quotes by Other Users
 app.get('/quotes/search', authenticate, async (req, res) => {
     const { userId } = req.query;
 
@@ -222,7 +236,7 @@ app.get('/quotes/search', authenticate, async (req, res) => {
     }
 });
 
-// Create Admin User
+//------------------------------------------------ Create Admin User
 (async () => {
     try {
         const adminExists = await User.findOne({ email: 'admin@admin.com' });
@@ -236,7 +250,7 @@ app.get('/quotes/search', authenticate, async (req, res) => {
     }
 })();
 
-// Start the Server
+//----------------------------------------------- Start the Server
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });

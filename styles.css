@@ -55,8 +55,8 @@
 }
 
 /* Ensure the delete button stays within the quote box */
-.quote-box {
-    position: relative; /* Enable positioning for child elements */
+/*.quote-box {
+    position: relative; 
     margin: 1em auto;
     padding: 1em;
     border: 1px solid #ccc;
@@ -66,7 +66,7 @@
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     text-align: center;
     cursor: grab;
-}
+}*/
 
 /* Style for the reordering icon */
 .reorder-icon {
@@ -88,6 +88,16 @@
     background-color: rgba(185, 184, 184, 0.96); /* Line color */
     border-radius: 1px; /* Slightly rounded edges */
 }
+
+/* Highlight selected quotes */
+.quote-box.selected {
+    border: 2px solid #4caf50; /* Green border for selected quotes */
+    background-color: #e8f5e9; /* Light green background */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transform: scale(1.02); /* Slightly enlarge */
+    transition: all 0.2s ease; /* Smooth transition */
+}
+
 
 /* Notification container */
 #notification-container {
