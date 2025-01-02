@@ -1,0 +1,147 @@
+/* Style for the quote box */
+.quote-box {
+    margin: 1em auto;
+    padding: 1em;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    max-width: 600px;
+    background-color: #f9f9f9;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    position: relative;
+}
+
+/* Style for the quote content */
+.quote-content {
+    font-size: 1.2em;
+    font-style: italic;
+    margin: 0;
+    color: #333;
+    word-wrap: break-word;
+}
+
+/* Style for the author */
+.quote-author {
+    margin: 0.5em 0 0;
+    font-size: 1em;
+    font-weight: bold;
+    color: #555;
+}
+
+/* Style for the delete button */
+.delete-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: red;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    font-size: 1em;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.delete-button:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Ensure the delete button stays within the quote box */
+.quote-box {
+    position: relative; /* Enable positioning for child elements */
+    margin: 1em auto;
+    padding: 1em;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    max-width: 600px;
+    background-color: #f9f9f9;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    cursor: grab;
+}
+
+/* Style for the reordering icon */
+.reorder-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%); /* Center vertically */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between; /* Space out the lines */
+    width: 30px; /* Width of the icon */
+    height: 20px; /* Height of the icon */
+    cursor: grab; /* Indicate draggable behavior */
+}
+
+.reorder-icon div {
+    width: 100%; /* Full width of the container */
+    height: 2px; /* Height of each line */
+    background-color: rgba(185, 184, 184, 0.96); /* Line color */
+    border-radius: 1px; /* Slightly rounded edges */
+}
+
+/* Notification container */
+#notification-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 300px;
+    z-index: 1000;
+}
+
+/* Individual notification */
+.notification {
+    margin-bottom: 10px;
+    padding: 10px 20px;
+    border-radius: 5px;
+    background-color: #333;
+    color: white;
+    font-size: 1em;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* Visible notification */
+.notification.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.notification.success {
+    background-color: #4caf50; /* Green for success */
+}
+
+.notification.error {
+    background-color: #f44336; /* Red for error */
+}
+
+.notification.info {
+    background-color: #2196f3; /* Blue for info */
+}
+
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .quote-box {
+        padding: 0.8em;
+    }
+
+    .quote-content {
+        font-size: 1em;
+    }
+
+    .quote-author {
+        font-size: 0.9em;
+    }
+}
