@@ -24,20 +24,6 @@ app.use(express.json());
 })();
 
 
-//// MongoDB Connection OLD
-////(async () => {
-//    try {
-//        await mongoose.connect(process.env.MONGO_URI, {
-//            useNewUrlParser: true,
-//            useUnifiedTopology: true,
-//        });
-//        console.log('Connected to MongoDB');
-//    } catch (error) {
-//        console.error('MongoDB connection error:', error);
-//        process.exit(1);
-//    }
-//})();
-
 // Schemas and Models
 const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
@@ -48,7 +34,7 @@ const userSchema = new mongoose.Schema({
 const quoteSchema = new mongoose.Schema({
     content: { type: String, required: true },
     author: { type: String, required: true },
-    tag:  { type: String, required: true },
+    order: Number, // Add the order attribute
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 });
 
@@ -122,39 +108,27 @@ app.post('/login', async (req, res) => {
     }
 });
 
-// Login
-// app.post('/login', async (req, res) => {
-//     const { email, password } = req.body;
+// Updated Add Quote
 
-//     try {
-//         const user = await User.findOne({ email });
-//         if (!user) return res.status(400).json({ message: 'Invalid email or password' });
-
-//         const match = await bcrypt.compare(password, user.password);
-//         if (!match) return res.status(400).json({ message: 'Invalid email or password' });
-
-//         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-//         res.status(200).json({ message: 'Login successful', token });
-//     } catch (error) {
-//         res.status(500).json({ message: 'Error logging in', error });
-//     }
-// });
-
-// Add Quote
 app.post('/quotes', authenticate, async (req, res) => {
-    const { content, author, tag } = req.body;
+    const { content, author } = req.body;
 
-    if (!content || !author || !tag) {
-        return res.status(400).json({ message: 'All fields are required' });
+    if (!content || !author) {
+        return res.status(400).json({ message: 'Content and author are required' });
     }
 
     try {
+        // Calculate the next available order for the user's quotes
+        const userQuotes = await Quote.find({ user: req.userId });
+        const nextOrder = userQuotes.length; // Assign the next position in the list
+
         const quote = new Quote({
             content,
             author,
-            tag,
+            order: nextOrder, // Assign order
             user: req.userId, // Associate the quote with the logged-in user
         });
+
         await quote.save();
         res.status(201).json({ message: 'Quote added successfully', quote });
     } catch (error) {
@@ -162,6 +136,48 @@ app.post('/quotes', authenticate, async (req, res) => {
         res.status(500).json({ message: 'Failed to add quote (backend)' });
     }
 });
+
+
+// Add Quote
+// app.post('/quotes', authenticate, async (req, res) => {
+//     const { content, author } = req.body;
+
+//     if (!content || !author) {
+//         return res.status(400).json({ message: 'All fields are required' });
+//     }
+
+//     try {
+//         const quote = new Quote({
+//             content,
+//             author,
+//             user: req.userId, // Associate the quote with the logged-in user
+//         });
+//         await quote.save();
+//         res.status(201).json({ message: 'Quote added successfully', quote });
+//     } catch (error) {
+//         console.error('Error adding quote (backend):', error);
+//         res.status(500).json({ message: 'Failed to add quote (backend)' });
+//     }
+// });
+
+//reorder Quotes
+
+app.post('/quotes/reorder', authenticate, async (req, res) => {
+    const updates = req.body; // Array of { id, order }
+    console.log('Reorder updates received:', updates);
+
+    try {
+        for (const { id, order } of updates) {
+            console.log(`Updating quote ID ${id} to order ${order}`);
+            await Quote.findByIdAndUpdate(id, { order });
+        }
+        res.status(200).json({ message: 'Order updated successfully' });
+    } catch (error) {
+        console.error('Error updating order (backend):', error);
+        res.status(500).json({ message: 'Failed to update order (backend)' });
+    }
+});
+
 
 //Delete Quote by User
 
@@ -187,7 +203,7 @@ app.delete('/quotes/:id', authenticate, async (req, res) => {
 // Get Quotes by User
 app.get('/quotes', authenticate, async (req, res) => {
     try {
-        const quotes = await Quote.find({ user: req.userId });
+        const quotes = await Quote.find({ user: req.userId }).sort({ order: 1 });
         res.status(200).json(quotes);
     } catch (error) {
         res.status(500).json({ message: 'Error retrieving quotes (backend)', error });

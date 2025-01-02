@@ -6,7 +6,7 @@
     <title>reQuote_v4</title>
 </head>
 <body>
-    <h1>Welcome to reQuote v_4 with updated signup</h1>
+    <h1>Welcome to reQuote v_4</h1>
 
     <!-- Authentication Section -->
     <div id="auth-section">
@@ -35,7 +35,6 @@
         <form id="add-quote-form">
             <input type="text" id="quote-content" placeholder="Quote" required>
             <input type="text" id="quote-author" placeholder="Author" required>
-            <input type="text" id="quote-tag" placeholder="Tag" required>
             <button type="submit">Add Quote</button>
         </form>
         <ul id="quotes-list"></ul>
@@ -56,7 +55,6 @@ addQuoteForm.addEventListener('submit', async (e) => {
 
     const content = document.getElementById('quote-content').value;
     const author = document.getElementById('quote-author').value;
-    const tag = document.getElementById('quote-tag').value;
 
     try {
         const response = await fetch('/quotes', {
@@ -65,7 +63,7 @@ addQuoteForm.addEventListener('submit', async (e) => {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`, // Include the token
             },
-            body: JSON.stringify({ content, author, tag }),
+            body: JSON.stringify({ content, author }),
         });
 
         if (response.ok) {
@@ -82,7 +80,7 @@ addQuoteForm.addEventListener('submit', async (e) => {
     }
 });
 
-//Updated loadQuote function
+//Drag and drop abilty
 
 async function loadQuotes() {
     try {
@@ -95,17 +93,28 @@ async function loadQuotes() {
 
         if (response.ok) {
             const quotes = await response.json();
+            
+            // Sort quotes by the order attribute before rendering
+            quotes.sort((a, b) => a.order - b.order);
+            console.log('Quotes retrieved from backend:', quotes);
             quotesList.innerHTML = ''; // Clear the list before updating
+
             quotes.forEach((quote) => {
                 const li = document.createElement('li');
-                li.textContent = `"${quote.content}" - ${quote.author} [${quote.tag}]`;
+                li.textContent = `"${quote.content}" - ${quote.author} [Order: ${quote.order}]`;
+                li.setAttribute('draggable', true); // Make the list item draggable
+                li.dataset.id = quote._id; // Store the quote ID for reference
+
+                // Drag-and-Drop Events
+                li.addEventListener('dragstart', handleDragStart);
+                li.addEventListener('dragover', handleDragOver);
+                li.addEventListener('drop', handleDrop);
 
                 // Create a delete button
                 const deleteButton = document.createElement('button');
                 deleteButton.textContent = 'Delete';
                 deleteButton.style.marginLeft = '10px';
                 deleteButton.addEventListener('click', async () => {
-                    console.log('Delete button clicked for:', quote._id); // Ensure the event fires
                     if (confirm('Are you sure you want to delete this quote?')) {
                         await deleteQuote(quote._id); // Call the delete function
                         loadQuotes(); // Refresh the quotes list
@@ -125,34 +134,142 @@ async function loadQuotes() {
     }
 }
 
+// Drag-and-Drop Handlers with Persistence
+let draggedItem = null;
 
- // Define the loadQuotes function
-    // async function loadQuotes() {
-    //     try {
-    //         const response = await fetch('/api/quotes', {
-    //             method: 'GET',
-    //             headers: {
-    //                 'Authorization': `Bearer ${token}`,
-    //             },
-    //         });
+function handleDragStart(event) {
+    draggedItem = event.target; // Store the dragged element
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', event.target.dataset.id); // Pass the ID
+    event.target.style.opacity = '0.5'; // Visual feedback
+}
 
-    //         if (response.ok) {
-    //             const quotes = await response.json();
-    //             quotesList.innerHTML = ''; // Clear the list before updating
-    //             quotes.forEach((quote) => {
-    //                 const li = document.createElement('li');
-    //                 li.textContent = `"${quote.content}" - ${quote.author} [${quote.tag}]`;
-    //                 quotesList.appendChild(li);
-    //             });
-    //         } else {
-    //             const data = await response.json();
-    //             alert(`Failed to load quotes: ${data.message}`);
-    //         }
-    //     } catch (error) {
-    //         console.error('Error loading quotes (frontend):', error);
-    //         alert('Failed to load quotes (frontend).');
-    //     }
-    // }
+function handleDragOver(event) {
+    event.preventDefault(); // Allow dropping
+    event.dataTransfer.dropEffect = 'move';
+}
+
+async function handleDrop(event) {
+    event.preventDefault();
+    const targetItem = event.target.closest('li'); // Get the drop target
+    if (draggedItem && targetItem && draggedItem !== targetItem) {
+        // Swap the positions visually
+        quotesList.insertBefore(draggedItem, targetItem.nextSibling);
+
+        // Save the new order
+        await saveOrder();
+         // Refresh the quotes list to reflect the updated order
+         await loadQuotes();
+    }
+    draggedItem.style.opacity = '1'; // Reset the dragged item's opacity
+    draggedItem = null;
+}
+
+//Latest Save Order Function
+
+async function saveOrder() {
+    try {
+        const newOrder = Array.from(quotesList.children).map((li, index) => ({
+            id: li.dataset.id, // Quote ID from the DOM
+            order: index, // New order based on position
+        }));
+
+        console.log('Saving order to backend:', newOrder); // Debug log
+
+        const response = await fetch('/quotes/reorder', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(newOrder), // Send the updated order
+        });
+
+        if (!response.ok) {
+            const data = await response.json();
+            alert(`Failed to save order: ${data.message}`);
+        } else {
+            console.log('Order saved successfully');
+        }
+    } catch (error) {
+        console.error('Error saving order (frontend):', error);
+        alert('Failed to save order (frontend).');
+    }
+}
+
+
+// // Save Order Function
+// async function saveOrder() {
+//     console.log('Saving order:', newOrder);
+//     const newOrder = Array.from(quotesList.children).map((li, index) => ({
+//         id: li.dataset.id,
+//         order: index,
+//     }));
+
+//     try {
+//         const response = await fetch('/quotes/reorder', {
+//             method: 'POST',
+//             headers: {
+//                 'Authorization': `Bearer ${token}`,
+//                 'Content-Type': 'application/json',
+//             },
+//             body: JSON.stringify(newOrder),
+//         });
+
+//         if (!response.ok) {
+//             const data = await response.json();
+//             alert(`Failed to save order: ${data.message}`);
+//         }
+//     } catch (error) {
+//         console.error('Error saving order (frontend):', error);
+//         alert('Failed to save order (frontend).');
+//     }
+// }
+
+
+
+//Updated loadQuote function
+
+// async function loadQuotes() {
+//     try {
+//         const response = await fetch('/quotes', {
+//             method: 'GET',
+//             headers: {
+//                 'Authorization': `Bearer ${token}`,
+//             },
+//         });
+
+//         if (response.ok) {
+//             const quotes = await response.json();
+//             quotesList.innerHTML = ''; // Clear the list before updating
+//             quotes.forEach((quote) => {
+//                 const li = document.createElement('li');
+//                 li.textContent = `"${quote.content}" - ${quote.author} [${quote.tag}]`;
+
+//                 // Create a delete button
+//                 const deleteButton = document.createElement('button');
+//                 deleteButton.textContent = 'Delete';
+//                 deleteButton.style.marginLeft = '10px';
+//                 deleteButton.addEventListener('click', async () => {
+//                     console.log('Delete button clicked for:', quote._id); // Ensure the event fires
+//                     if (confirm('Are you sure you want to delete this quote?')) {
+//                         await deleteQuote(quote._id); // Call the delete function
+//                         loadQuotes(); // Refresh the quotes list
+//                     }
+//                 });
+
+//                 li.appendChild(deleteButton); // Add the button to the list item
+//                 quotesList.appendChild(li);
+//             });
+//         } else {
+//             const data = await response.json();
+//             alert(`Failed to load quotes: ${data.message}`);
+//         }
+//     } catch (error) {
+//         console.error('Error loading quotes (frontend):', error);
+//         alert('Failed to load quotes (frontend).');
+//     }
+// }
 
     //Delete Quote
     async function deleteQuote(quoteId) {
