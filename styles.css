@@ -4,7 +4,8 @@
     padding: 1em;
     border: 1px solid #ccc;
     border-radius: 10px;
-    max-width: 600px;
+    padding: 20px; /* Inner space for the content */
+    max-width: 800px;
     background-color: #f9f9f9;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     text-align: center;
@@ -15,8 +16,11 @@
 .quote-content {
     font-size: 1.2em;
     font-style: italic;
+    padding-right: 40px; /* Space to avoid overlap with delete button */
+    padding-left:40px;
     margin: 0;
     color: #333;
+    text-align: left;
     word-wrap: break-word;
 }
 
@@ -24,6 +28,8 @@
 .quote-author {
     margin: 0.5em 0 0;
     font-size: 1em;
+    text-align: right;
+    padding-right: 100px;
     font-weight: bold;
     color: #555;
 }
@@ -53,20 +59,6 @@
     transform: scale(1.1);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
-
-/* Ensure the delete button stays within the quote box */
-/*.quote-box {
-    position: relative; 
-    margin: 1em auto;
-    padding: 1em;
-    border: 1px solid #ccc;
-    border-radius: 10px;
-    max-width: 600px;
-    background-color: #f9f9f9;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    text-align: center;
-    cursor: grab;
-}*/
 
 /* Style for the reordering icon */
 .reorder-icon {

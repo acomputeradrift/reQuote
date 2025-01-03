@@ -34,10 +34,14 @@
     <!-- Quotes Input Section -->
     <div id="quotes-section" style="display: none;">
         <h2>Quotes</h2>
+        <!-- Admin Test Button -->
+        
         <form id="add-quote-form">
             <input type="text" id="quote-content" placeholder="Quote" required>
             <input type="text" id="quote-author" placeholder="Author" required>
+            <input type="text" id="quote-source" placeholder="Source" >
             <button type="submit">Add Quote</button>
+            <button id="generate-test-quotes" style="display: none;">Generate Test Quotes</button>
         </form>
         <ul id="quotes-list"></ul>
     </div>
@@ -52,7 +56,73 @@
         const addQuoteForm = document.getElementById('add-quote-form');
         const quotesList = document.getElementById('quotes-list');
 
+        let email = null; // Declare a global email variable
         let token = null;
+        let selectedQuotes = []; // Persistent array to track selected quotes
+        let draggedItem = null;
+
+//------------------------SignUp and SignIn
+
+        // Updated Signup Logic
+        signupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+
+            try {
+                const response = await fetch('/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                if (response.ok) {
+                    alert('Sign-up successful! Please log in.');
+                    signupForm.reset();
+                } else {
+                    const data = await response.json();
+                    alert(`Sign-up failed: ${data.message}`);
+                }
+            } catch (error) {
+                console.error("Error during sign-up:", error);
+                alert('Sign-up failed.');
+            }
+        });
+
+        // Updated Login Logic
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    token = data.token;
+                    showNotification(`Welcome ${data.email}!`, 'success');
+
+                    authSection.style.display = 'none';
+                    quotesSection.style.display = 'block';
+                    showAdminFeatures(data.email); // Show admin-only features
+                    fetchSelectedQuotes(); // Fetch selected quotes from the backend
+                    loadQuotes();
+                } else {
+                    const data = await response.json();
+                    alert(`Login failed: ${data.message}`);
+                }
+            } catch (error) {
+                console.error("Error during login:", error);
+                alert('Login failed.');
+            }
+        });
+   
+//---------------------------- Quotes 
 
 //Create and Save Origin Quotes
 addQuoteForm.addEventListener('submit', async (e) => {
@@ -60,6 +130,7 @@ addQuoteForm.addEventListener('submit', async (e) => {
 
     const content = document.getElementById('quote-content').value;
     const author = document.getElementById('quote-author').value;
+    const source = document.getElementById('quote-source').value;
 
     try {
         const response = await fetch('/quotes', {
@@ -68,7 +139,7 @@ addQuoteForm.addEventListener('submit', async (e) => {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`, // Include the token
             },
-            body: JSON.stringify({ content, author }),
+            body: JSON.stringify({ content, author, source }),
         });
 
         if (response.ok) {
@@ -85,8 +156,7 @@ addQuoteForm.addEventListener('submit', async (e) => {
     }
 });
 
-//Load Quotes
-let selectedQuotes = []; // Persistent array to track selected quotes
+//Load Quotes by User
 async function loadQuotes() {
     try {
         const response = await fetch('/quotes', {
@@ -166,7 +236,7 @@ async function loadQuotes() {
                         await deleteQuote(quote._id); // Call the delete function
                         loadQuotes(); // Refresh the quotes list
                     }
-                    event.stopPropagation(); // Prevent the click event on the quote box
+                    //event.stopPropagation(); // Prevent the click event on the quote box
                 });
 
                 // Append content, author, and delete button to the box
@@ -232,9 +302,7 @@ async function updateSelectedQuotesInBackend() {
     }
 }
 
-// Drag-and-Drop Handlers with Persistence
-let draggedItem = null;
-
+//Drag-and-Drop Handlers
 function handleDragStart(event) {
     draggedItem = event.target.closest('.quote-box'); // Store the dragged element
     event.dataTransfer.effectAllowed = 'move';
@@ -302,7 +370,7 @@ async function saveOrder() {
             order: index, // New order based on position
         }));
 
-        console.log('Saving order to backend:', newOrder); // Debug log
+        //console.log('Saving order to backend:', newOrder); // Debug log
 
         const response = await fetch('/quotes/reorder', {
             method: 'POST',
@@ -327,7 +395,7 @@ async function saveOrder() {
 
 //Delete Quote
 async function deleteQuote(quoteId) {
-    console.log('Attempting DELETE for:', `/quotes/${quoteId}`);
+    //console.log('Attempting DELETE for:', `/quotes/${quoteId}`);
     try {
         const response = await fetch(`/quotes/${quoteId}`, {
             method: 'DELETE',
@@ -349,66 +417,40 @@ async function deleteQuote(quoteId) {
     }
 }
 
-//------------------------SignUp and SignIn
+// Check if the user is an admin and show the button
+function showAdminFeatures(userEmail) {
+    //console.log('Checking admin features for email:', userEmail); // Debug log
+    if (userEmail === 'feeny.jamie@gmail.com') { // Replace with your admin email
+        document.getElementById('generate-test-quotes').style.display = 'block';
+    }
+}
 
-        // Updated Signup Logic
-        signupForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('signup-email').value;
-            const password = document.getElementById('signup-password').value;
+// Generate test quotes
+document.getElementById('generate-test-quotes').addEventListener('click', async () => {
+    if (!confirm('Are you sure you want to generate 30 test quotes?')) return;
 
-            try {
-                const response = await fetch('/signup', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
-                });
-
-                if (response.ok) {
-                    alert('Sign-up successful! Please log in.');
-                    signupForm.reset();
-                } else {
-                    const data = await response.json();
-                    alert(`Sign-up failed: ${data.message}`);
-                }
-            } catch (error) {
-                console.error("Error during sign-up:", error);
-                alert('Sign-up failed.');
-            }
+    try {
+        const response = await fetch('/quotes/generate', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
         });
 
-        // Updated Login Logic
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
+        if (response.ok) {
+            alert('30 test quotes generated successfully!');
+            loadQuotes(); // Reload the quotes list
+        } else {
+            const data = await response.json();
+            alert(`Failed to generate test quotes: ${data.message}`);
+        }
+    } catch (error) {
+        console.error('Error generating test quotes:', error);
+        alert('Failed to generate test quotes.');
+    }
+});
 
-            try {
-                const response = await fetch('/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    token = data.token;
-                    // alert(`Login successful! Welcome ${data.email}!`);
-                    showNotification(`Welcome ${data.email}!`, 'success');
-
-                    authSection.style.display = 'none';
-                    quotesSection.style.display = 'block';
-                    fetchSelectedQuotes(); // Fetch selected quotes from the backend
-                    loadQuotes();
-                } else {
-                    const data = await response.json();
-                    alert(`Login failed: ${data.message}`);
-                }
-            } catch (error) {
-                console.error("Error during login:", error);
-                alert('Login failed.');
-            }
-        });
     </script>
 </body>
 </html>
