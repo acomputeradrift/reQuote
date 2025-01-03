@@ -217,6 +217,13 @@ async function loadQuotes() {
                 author.textContent = `- ${quote.author}`;
                 author.className = 'quote-author'; // Add a class for styling
 
+                // Source Section (only if provided)
+                const source = document.createElement('p');
+                if (quote.source && quote.source.trim() !== '') {
+                    source.textContent = `, ${quote.source}`;
+                    source.className = 'quote-source-italic';
+                }
+
                 // Create the reordering icon
                 const reorderIcon = document.createElement('div');
                 reorderIcon.className = 'reorder-icon'; // Add a class for styling
@@ -242,6 +249,9 @@ async function loadQuotes() {
                 // Append content, author, and delete button to the box
                 quoteBox.appendChild(content);
                 quoteBox.appendChild(author);
+                if (quote.source && quote.source.trim() !== '') {
+                    quoteBox.appendChild(source); // Append only if source exists
+                }
                 quoteBox.appendChild(deleteButton);
                 quoteBox.appendChild(reorderIcon);
 
@@ -407,6 +417,7 @@ async function deleteQuote(quoteId) {
         if (response.ok) {
             // alert('Quote deleted successfully');
             showNotification('Quote deleted successfully', 'success');
+            loadQuotes();
         } else {
             const data = await response.json();
             alert(`Failed to delete quote: ${data.message}`);

@@ -56,7 +56,6 @@ const scheduleSchema = new mongoose.Schema({
 const User = mongoose.model('User', userSchema);
 const Quote = mongoose.model('Quote', quoteSchema);
 const Schedule = mongoose.model('Schedule', scheduleSchema);
-//const Schedule = require('./models/Schedule'); // Import the Schedule model
 
 //------------------------------------------------------ Initialize the Express app
 const app = express();
@@ -65,7 +64,7 @@ app.use(express.json());
 // Middleware
 const authenticate = async (req, res, next) => {
     const token = req.headers.authorization?.split(' ')[1];
-    console.log('User authenticated with token:', token);
+    //console.log('User authenticated with token:', token);
     if (!token) return res.status(401).json({ message: 'Unauthorized' });
 
     try {
@@ -107,7 +106,7 @@ app.post('/signup', async (req, res) => {
         res.status(500).json({ message: 'Error signing up', error });
     }
 });
-//Login (logged)
+//Login (logging...)
 app.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
@@ -122,7 +121,7 @@ app.post('/login', async (req, res) => {
         const token = jwt.sign({ userId: user._id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
         // Send token and email back to the frontend
-        console.log(`${user.email}: logged in.`);
+        console.log(`\n${user.email} logged in\n`);
         res.status(200).json({ message: 'Login successful', token, email: user.email });
     } catch (error) {
         console.error('Error during login:', error);
@@ -130,9 +129,7 @@ app.post('/login', async (req, res) => {
     }
 });
 
-// Newest Add Quote
-
-// Add Quote (logged)
+// Add Quote (logging...)
 app.post('/quotes', authenticate, async (req, res) => {
     const { content, author, source } = req.body;
 
@@ -155,52 +152,20 @@ app.post('/quotes', authenticate, async (req, res) => {
         });
 
         await quote.save();
-
+        console.log('\nQuote object saved');
         // Add the quote to the user's quotes field
         const user = await User.findById(req.userId);
         if (user) {
             user.quotes.push(quote._id);
             await user.save();
+            console.log('Quote object added to user');
         }
-
         res.status(201).json({ message: 'Quote added successfully', quote });
     } catch (error) {
         console.error('Error adding quote (backend):', error);
         res.status(500).json({ message: 'Failed to add quote (backend)' });
     }
 });
-
-
-// //Add Quote (logged)
-// app.post('/quotes', authenticate, async (req, res) => {
-//     const { content, author, source } = req.body;
-
-//     if (!content || !author) {
-//         return res.status(400).json({ message: 'Content and author are required' });
-//     }
-
-//     try {
-//         // Calculate the next available order for the user's quotes
-//         const userQuotes = await Quote.find({ user: req.userId });
-//         const nextOrder = userQuotes.length; // Assign the next position in the list
-
-//         // Create a new quote
-//         const quote = new Quote({
-//             content,
-//             author,
-//             source,
-//             order: nextOrder, // Assign order
-//             user: req.userId, // Associate the quote with the logged-in user
-//         });
-
-//         await quote.save();
-//         //console.log(`Quote added by ${user.email}`);
-//         res.status(201).json({ message: 'Quote added successfully', quote });
-//     } catch (error) {
-//         console.error('Error adding quote (backend):', error);
-//         res.status(500).json({ message: 'Failed to add quote (backend)' });
-//     }
-// });
 
 //Get Quotes by User
 app.get('/quotes', authenticate, async (req, res) => {
@@ -229,26 +194,47 @@ app.post('/quotes/reorder', authenticate, async (req, res) => {
     }
 });
 
-//Delete Quote by User
+//Delete Quote By User (logging...)
 app.delete('/quotes/:id', authenticate, async (req, res) => {
-    //console.log('Delete request received for ID:', req.params.id); // Log the ID
-    //console.log('Authenticated user ID:', req.userId); // Log the user ID
+    const quoteId = req.params.id;
     try {
-        const quoteId = req.params.id;
+        // Step 1: Delete the quote
         const deletedQuote = await Quote.findOneAndDelete({ _id: quoteId, user: req.userId });
-
         if (!deletedQuote) {
-            return res.status(404).json({ message: 'Quote not found or not authorized to delete' });
+            return res.status(404).json({ message: 'Quote not found or not authorized to delete.' });
+        }
+        console.log('Quote object deleted');
+        // Step 2: Remove the quote from the user's quotes
+        const user = await User.findById(req.userId);
+        if (user) {
+            user.quotes = user.quotes.filter((id) => id.toString() !== quoteId);
+            await user.save();
+            console.log('Quote deleted from user.quotes:', user.selectedQuotes);
         }
 
-        res.status(200).json({ message: 'Quote deleted successfully' });
+        // Step 2: Remove the quote from the user's selectedQuotes
+        if (user) {
+            user.selectedQuotes = user.selectedQuotes.filter((id) => id.toString() !== quoteId);
+            await user.save();
+            console.log('Quote deleted from user.selectedQuotes:', user.selectedQuotes);
+        }
+
+        // Step 3: Remove the quote from the schedule's selectedQuotes
+        const schedule = await Schedule.findOne({ user: req.userId });
+        if (schedule) {
+            schedule.selectedQuotes = schedule.selectedQuotes.filter((id) => id.toString() !== quoteId);
+            await schedule.save();
+            console.log('Quote deleted from schedule.selectedQuotes:', schedule.selectedQuotes);
+        }
+
+        res.status(200).json({ message: 'Quote deleted successfully.' });
     } catch (error) {
         console.error('Error deleting quote:', error);
-        res.status(500).json({ message: 'Failed to delete quote (backend)' });
+        res.status(500).json({ message: 'Failed to delete quote.' });
     }
 });
 
-//Newest Update Selected Quotes
+//Update Selected Quotes
 app.post('/quotes/selected', authenticate, async (req, res) => {
     const { selectedQuotes } = req.body;
 
@@ -257,28 +243,39 @@ app.post('/quotes/selected', authenticate, async (req, res) => {
     }
 
     try {
-        // Find or create a schedule for the user
+        // Step 1: Update the user's selectedQuotes
+        const user = await User.findById(req.userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        user.selectedQuotes = selectedQuotes;
+        await user.save();
+        console.log('user.selectedQuotes updated:', user.selectedQuotes);
+
+        // Step 2: Update or create the schedule using the user's selectedQuotes
         let schedule = await Schedule.findOne({ user: req.userId });
 
         if (!schedule) {
             // Create a new schedule if one doesn't exist
             schedule = new Schedule({
                 user: req.userId,
-                selectedQuotes,
-                nextIndex: 0, // Start at the first quote
+                selectedQuotes: user.selectedQuotes, // Use updated selectedQuotes from user
+                nextIndex: 0,
             });
         } else {
-            // Update existing schedule with new quotes and reset the index
-            schedule.selectedQuotes = selectedQuotes;
+            // Update existing schedule
+            schedule.selectedQuotes = user.selectedQuotes;
             schedule.nextIndex = 0;
         }
 
-        await schedule.save(); // Save the schedule
+        await schedule.save();
+        console.log('schedule.selectedQuotes updated:', schedule.selectedQuotes);
 
-        res.status(200).json({ message: 'Selected quotes scheduled successfully.' });
+        res.status(200).json({ message: 'Selected quotes updated successfully.' });
     } catch (error) {
-        console.error('Error scheduling selected quotes:', error);
-        res.status(500).json({ message: 'Failed to schedule selected quotes.' });
+        console.error('Error updating selected quotes:', error);
+        res.status(500).json({ message: 'Failed to update selected quotes.' });
     }
 });
 
@@ -345,7 +342,7 @@ async function sendEmail(to, subject, text) {
             subject,
             text,
         });
-        console.log(`Email sent to ${to}`);
+        console.log(`\nEmail ${subject} sent to ${to}: ${text}`);
     } catch (error) {
         console.error('Error sending email:', error);
     }
@@ -354,7 +351,7 @@ async function sendEmail(to, subject, text) {
 //-------------------------------------------------Cron Jobs
 //cron.schedule('* * * * *', async () => {    //sends every minute FOR TESTING
 cron.schedule('0 6 * * *', async () => {
-    console.log('Running email scheduler...');
+    console.log('\nRunning email scheduler...');
     try {
         const schedules = await Schedule.find({}).populate('selectedQuotes user');
         
@@ -368,7 +365,6 @@ cron.schedule('0 6 * * *', async () => {
 
             // Send the email
             await sendEmail(user.email, 'Your Morning Quote', emailText);
-            console.log(`Email sent to ${user.email}: "${quote.content}"`);
 
             // Update the next index and loop back if necessary
             schedule.nextIndex = (nextIndex + 1) % selectedQuotes.length;
