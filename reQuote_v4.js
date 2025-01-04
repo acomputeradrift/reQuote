@@ -349,7 +349,7 @@ async function sendEmail(to, subject, text) {
 }
 
 //-------------------------------------------------Cron Jobs
-//cron.schedule('* * * * *', async () => {    //sends every minute FOR TESTING
+// cron.schedule('* * * * *', async () => {    //sends every minute FOR TESTING
 cron.schedule('0 6 * * *', async () => {
     console.log('\nRunning email scheduler...');
     try {
@@ -373,7 +373,9 @@ cron.schedule('0 6 * * *', async () => {
     } catch (error) {
         console.error('Error running email scheduler:', error);
     }
-});
+}, {
+    timezone: "Asia/Makassar"}
+);
 
 //----------------------------------------------- Start the Server
 app.listen(PORT, () => {

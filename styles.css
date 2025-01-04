@@ -1,3 +1,102 @@
+
+/*---------------------------------------- Global Reset and Centering */
+body, html {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f9f9f9;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Header Styling */
+h1 {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    font-size: 2rem;
+    color: #333;
+}
+
+/* ------------------------------------------Sign Up / Log In */
+/* Form Section Styling */
+#auth-section {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-top: 100px;
+}
+
+/* Form Container Styling */
+.form-container {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid #ddd;
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+/* Input Styling */
+.form-container input {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-sizing: border-box;
+}
+
+/* Button Styling */
+.form-button {
+    margin-top: 15px;
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    background: #4caf50;
+    color: white;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.form-button:hover {
+    background: #45a049;
+}
+
+/*------------------------------------------- Quote Section Styling (Hidden Initially) */
+#quotes-section {
+    display: none;
+    margin-top: 20px;
+    width: 100%;
+    text-align: center;
+}
+
+#generate-test-quotes {
+    margin-top: 10px;
+    display: block;
+    margin: 20px auto; /* Auto centers horizontally */
+    background: #2196f3;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+#generate-test-quotes:hover {
+    background: #1e88e5;
+}
+
+/*----------------------------------------------------------Quote Box */
 /* Style for the quote box */
 .quote-box {
     margin: 1em auto;
@@ -104,7 +203,7 @@
 }
 
 
-/* Notification container */
+/* ------------------------------------------Notifications */
 #notification-container {
     position: fixed;
     top: 20px;
@@ -146,6 +245,11 @@
 }
 
 
+
+
+
+/* ------------------------------------------Responsive */
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .quote-box {
@@ -160,3 +264,22 @@
         font-size: 0.9em;
     }
 } 
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .form-container {
+        padding: 20px;
+    }
+
+    .form-container h2 {
+        font-size: 1.5rem;
+    }
+
+    .form-container input {
+        font-size: 0.9rem;
+    }
+
+    .form-button {
+        font-size: 0.9rem;
+    }
+}
