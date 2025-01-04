@@ -329,28 +329,28 @@ setTimeout(() => notification.remove(), 300); // Wait for fade-out transition
 //Save Quote Order
 async function saveOrder() {
 try {
-const newOrder = Array.from(quotesList.children).map((li, index) => ({
-    id: li.dataset.id, // Quote ID from the DOM
-    order: index, // New order based on position
-}));
+    const newOrder = Array.from(quotesList.children).map((li, index) => ({
+        id: li.dataset.id, // Quote ID from the DOM
+        order: index, // New order based on position
+    }));
 
-//console.log('Saving order to backend:', newOrder); // Debug log
+    //console.log('Saving order to backend:', newOrder); // Debug log
 
-const response = await fetch('/quotes/reorder', {
-    method: 'POST',
-    headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(newOrder), // Send the updated order
-});
+    const response = await fetch('/quotes/reorder', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newOrder), // Send the updated order
+    });
 
-if (!response.ok) {
-    const data = await response.json();
-    alert(`Failed to save order: ${data.message}`);
-} else {
-    console.log('Order saved successfully');
-}
+    if (!response.ok) {
+        const data = await response.json();
+        alert(`Failed to save order: ${data.message}`);
+    } else {
+        console.log('Order saved successfully');
+    }
 } catch (error) {
 console.error('Error saving order (frontend):', error);
 alert('Failed to save order (frontend).');
