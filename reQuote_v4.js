@@ -333,23 +333,35 @@ app.post('/quotes/generate', authenticate, async (req, res) => {
     }
 });
 
-//Function to send an email
-async function sendEmail(to, subject, text) {
+//Function to send an email with HTML and a website link
+async function sendEmail(to, subject, quote) {
     try {
+        const emailContent = `
+            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; padding: 20px; border: 1px solid #ddd; border-radius: 10px; max-width: 600px; margin: auto;">
+                <p style="font-size: 1.2rem; font-style: italic;">${quote.content}</p>
+                <p style="font-weight: bold; margin-top: 10px;">- ${quote.author}</p>
+                ${quote.source ? `<p style="color: #777; font-style: italic;">Source: ${quote.source}</p>` : ''}
+                <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+                <p style="text-align: center; font-size: 0.9rem;">
+                    🌟 <a href="http://206.189.153.211" style="color: #2196F3; text-decoration: none;">Visit reQuote for more inspiration!</a> 🌟
+                </p>
+            </div>
+        `;
+
         await transporter.sendMail({
             from: process.env.EMAIL_USER,
             to,
             subject,
-            text,
+            html: emailContent, // Use HTML instead of plain text
         });
-        console.log(`\nEmail ${subject} sent to ${to}: ${text}`);
+        console.log(`Email "${quote.content}" sent to ${to}`);
     } catch (error) {
         console.error('Error sending email:', error);
     }
 }
 
 //-------------------------------------------------Cron Jobs
-// cron.schedule('* * * * *', async () => {    //sends every minute FOR TESTING
+//cron.schedule('* * * * *', async () => {    //sends every minute FOR TESTING
 cron.schedule('0 6 * * *', async () => {
     console.log('\nRunning email scheduler...');
     try {
@@ -361,10 +373,10 @@ cron.schedule('0 6 * * *', async () => {
             if (selectedQuotes.length === 0) continue; // Skip if no quotes are scheduled
 
             const quote = selectedQuotes[nextIndex];
-            const emailText = `"${quote.content}" - ${quote.author}`;
+           // const emailText = `${quote.content} - ${quote.author}, ${quote.source}`;
 
             // Send the email
-            await sendEmail(user.email, 'Your Morning Quote', emailText);
+            await sendEmail(user.email, 'Your Morning Quote', quote);
 
             // Update the next index and loop back if necessary
             schedule.nextIndex = (nextIndex + 1) % selectedQuotes.length;

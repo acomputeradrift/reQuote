@@ -80,8 +80,14 @@ h1 {
 }
 
 /*------------------------------------------- Quote Section Styling (Hidden Initially) */
-#quotes-section {
-    margin-top: 100px;
+#add-quotes-section {
+    margin-top: 60px;
+    display:none;
+    width: 100%;
+    text-align: center;
+}
+
+#list-quotes-section {
     width: 100%;
     text-align: center;
 }
