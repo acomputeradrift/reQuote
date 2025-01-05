@@ -105,7 +105,7 @@ addQuoteForm.addEventListener('submit', async (e) => {
     }
 });
 
-//Load Quotes by User
+//Load and Sort Quotes by User
 async function loadQuotes() {
     try {
     const response = await fetch('/quotes', {
@@ -123,102 +123,7 @@ async function loadQuotes() {
         quotesList.innerHTML = ''; // Clear the list before updating
 
         quotes.forEach((quote) => {
-            const quoteBox = document.createElement('div'); // Create a container for the quote
-            quoteBox.className = 'quote-box'; // Add a class for styling
-            // quoteBox.setAttribute('draggable', true); // Make the box draggable
-            quoteBox.dataset.id = quote._id; // Store the quote ID for reference
-
-            // Reapply the selected class if the quote is in the selectedQuotes array
-            if (selectedQuotes.includes(quote._id)) {
-                quoteBox.classList.add('selected');
-            }
-
-        // Handle click to toggle selection
-            quoteBox.addEventListener('click', async (event) => {
-                if (selectedQuotes.includes(quote._id)) {
-                    // Unselect the quote
-                    selectedQuotes = selectedQuotes.filter((id) => id !== quote._id);
-                    quoteBox.classList.remove('selected'); // Remove selected style
-                } else if (selectedQuotes.length < 21) {
-                    // Select the quote
-                    selectedQuotes.push(quote._id);
-                    quoteBox.classList.add('selected'); // Add selected style
-                } else {
-                    alert('You can select up to 21 quotes only.');
-                }
-                // Send the updated selection to the backend
-                await updateSelectedQuotesInBackend();
-                event.stopPropagation(); // Prevent event bubbling
-            });
-
-            // Drag-and-Drop Events
-            // quoteBox.addEventListener('dragstart', handleDragStart);
-            // quoteBox.addEventListener('dragover', handleDragOver);
-            // quoteBox.addEventListener('drop', handleDrop);
-
-            // Add the quote content
-            const content = document.createElement('p');
-            content.textContent = quote.content;
-            content.className = 'quote-content'; // Add a class for styling
-
-            // Combined Author and Source (Same Line)
-            const authorAndSource = document.createElement('p');
-            authorAndSource.className = 'quote-author-source';
-            
-            // Separate spans for styling
-            const authorSpan = document.createElement('span');
-            authorSpan.textContent = quote.author;
-            authorSpan.className = 'quote-author-normal';
-
-            const sourceSpan = document.createElement('span');
-            if (quote.source && quote.source.trim() !== '') {
-                sourceSpan.textContent = `, ${quote.source}`;
-                sourceSpan.className = 'quote-source-italic';
-            }
-
-            // Append both spans inside the same element
-            authorAndSource.appendChild(authorSpan);
-            if (quote.source && quote.source.trim() !== '') {
-                authorAndSource.appendChild(sourceSpan);
-            }
-
-            // Create the reordering icon
-            const reorderIcon = document.createElement('div');
-            reorderIcon.className = 'reorder-icon'; // Add a class for styling
-
-            // Add the three lines to the reorder icon
-            for (let i = 0; i < 3; i++) {
-                const line = document.createElement('div');
-                reorderIcon.appendChild(line);
-            }
-
-            // Create a delete button
-            const deleteButton = document.createElement('button');
-            deleteButton.textContent = 'X'; // Set the text as "X"
-            deleteButton.className = 'delete-button'; // Add a class for styling
-            deleteButton.addEventListener('click', async () => {
-                if (confirm('Are you sure you want to delete this quote?')) {
-                    await deleteQuote(quote._id); // Call the delete function
-                    loadQuotes(); // Refresh the quotes list
-                }
-            });
-
-            // Append content, author, and delete button to the box
-            quoteBox.appendChild(content);
-            quoteBox.appendChild(authorAndSource);
-            quoteBox.appendChild(deleteButton);
-            quoteBox.appendChild(reorderIcon);
-
-            // Allow dragging only when clicking the icon but move the whole box
-            reorderIcon.setAttribute('draggable', true); 
-            reorderIcon.addEventListener('dragstart', handleDragStart);
-
-            // Main drag events for the quote box
-            quoteBox.addEventListener('dragover', handleDragOver);
-            quoteBox.addEventListener('drop', handleDrop);
-
-            // Add the quote box to the quotes list
-            quotesList.appendChild(quoteBox);
+            renderQuoteBox(quote);
         });
 
     } else {
@@ -229,6 +134,109 @@ async function loadQuotes() {
     console.error('Error loading quotes (frontend):', error);
     alert('Failed to load quotes (frontend).');
     }
+}
+
+//Render Each Quote Box
+function renderQuoteBox(quote) {
+        const amazonLinkHTML = generateAmazonLink(quote.author, quote.source);
+        const quoteBox = document.createElement('div'); // Create a container for the quote
+        quoteBox.className = 'quote-box'; // Add a class for styling
+        // quoteBox.setAttribute('draggable', true); // Make the box draggable
+        quoteBox.dataset.id = quote._id; // Store the quote ID for reference
+
+        // Reapply the selected class if the quote is in the selectedQuotes array
+        if (selectedQuotes.includes(quote._id)) {
+            quoteBox.classList.add('selected');
+        }
+
+    // Handle click to toggle selection
+        quoteBox.addEventListener('click', async (event) => {
+            if (selectedQuotes.includes(quote._id)) {
+                // Unselect the quote
+                selectedQuotes = selectedQuotes.filter((id) => id !== quote._id);
+                quoteBox.classList.remove('selected'); // Remove selected style
+            } else if (selectedQuotes.length < 21) {
+                // Select the quote
+                selectedQuotes.push(quote._id);
+                quoteBox.classList.add('selected'); // Add selected style
+            } else {
+                alert('You can select up to 21 quotes only.');
+            }
+            // Send the updated selection to the backend
+            await updateSelectedQuotesInBackend();
+            event.stopPropagation(); // Prevent event bubbling
+        });
+
+        // Drag-and-Drop Events
+        // quoteBox.addEventListener('dragstart', handleDragStart);
+        // quoteBox.addEventListener('dragover', handleDragOver);
+        // quoteBox.addEventListener('drop', handleDrop);
+
+        // Add the quote content
+        const content = document.createElement('p');
+        content.textContent = quote.content;
+        content.className = 'quote-content'; // Add a class for styling
+
+        // Combined Author and Source (Same Line)
+        const authorAndSource = document.createElement('p');
+        authorAndSource.className = 'quote-author-source';
+        
+        // Separate spans for styling
+        const authorSpan = document.createElement('span');
+        authorSpan.textContent = quote.author;
+        authorSpan.className = 'quote-author-normal';
+
+        const sourceSpan = document.createElement('span');
+        if (quote.source && quote.source.trim() !== '') {
+            sourceSpan.innerHTML = `, ${amazonLinkHTML}`;
+            // sourceSpan.textContent = `, ${quote.source}`;
+            sourceSpan.className = 'quote-source-italic';
+        }
+
+        // Append both spans inside the same element
+        authorAndSource.appendChild(authorSpan);
+        if (quote.source && quote.source.trim() !== '') {
+            authorAndSource.appendChild(sourceSpan);
+        }
+
+        // Create the reordering icon
+        const reorderIcon = document.createElement('div');
+        reorderIcon.className = 'reorder-icon'; // Add a class for styling
+
+        // Add the three lines to the reorder icon
+        for (let i = 0; i < 3; i++) {
+            const line = document.createElement('div');
+            reorderIcon.appendChild(line);
+        }
+
+        // Create a delete button
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = 'X'; // Set the text as "X"
+        deleteButton.className = 'delete-button'; // Add a class for styling
+        deleteButton.addEventListener('click', async () => {
+            if (confirm('Are you sure you want to delete this quote?')) {
+                await deleteQuote(quote._id); // Call the delete function
+                loadQuotes(); // Refresh the quotes list
+            }
+        });
+
+        // Append content, author, and delete button to the box
+        quoteBox.appendChild(content);
+        quoteBox.appendChild(authorAndSource);
+        quoteBox.appendChild(deleteButton);
+        quoteBox.appendChild(reorderIcon);
+
+        // Allow dragging only when clicking the icon but move the whole box
+        reorderIcon.setAttribute('draggable', true); 
+        reorderIcon.addEventListener('dragstart', handleDragStart);
+        reorderIcon.addEventListener('dragend', handleDragEnd);
+
+        // Main drag events for the quote box
+        quoteBox.addEventListener('dragover', handleDragOver);
+        quoteBox.addEventListener('drop', handleDrop);
+
+        // Add the quote box to the quotes list
+        quotesList.appendChild(quoteBox);
 }
 
 //Fetch Selected Quotes from Backend
@@ -295,6 +303,13 @@ function handleDragOver(event) {
     event.dataTransfer.dropEffect = 'move';
 }
 
+// Drag end (reset opacity)
+function handleDragEnd() {
+    if (draggedItem) {
+        draggedItem.style.opacity = '1';
+    }
+}
+
 async function handleDrop(event) {
     event.preventDefault();
     const targetItem = event.target.closest('.quote-box'); // Get the drop target
@@ -313,6 +328,27 @@ async function handleDrop(event) {
     }
     draggedItem.style.opacity = '1'; // Reset the dragged item's opacity
     draggedItem = null;
+}
+
+//updated 
+function generateAmazonLink(author, source) {
+    if (!author || !source) {
+        console.warn('Author or source missing for Amazon link generation.');
+        return ''; // Return empty if either is missing
+    }
+
+    // Encode the search terms for the URL
+    const query = encodeURIComponent(`${author} ${source}`);
+    const amazonURL = `https://www.amazon.com/s?k=${query}&tag=YOUR_AFFILIATE_TAG`;
+
+    // Return a properly formatted and clickable link as HTML
+
+    return `<a href="${amazonURL}" target="_blank" rel="noopener noreferrer" style="color: #2196F3; text-decoration: none;">${source}</a>`;
+
+    // return `<a href="${amazonURL}" target="_blank" rel="noopener noreferrer"
+    //          style="color: white; background-color: #FF9900; padding: 10px 15px; border-radius: 5px; text-decoration: none; font-weight: bold;">
+    //          Buy on Amazon
+    //         </a>`;
 }
 
 //-------------------------Notification Alerts
