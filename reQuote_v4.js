@@ -121,7 +121,7 @@ app.post('/login', async (req, res) => {
         const token = jwt.sign({ userId: user._id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
         // Send token and email back to the frontend
-        console.log(`\n${user.email} logged in\n`);
+        console.log(`${user.email} logged in\n`);
         res.status(200).json({ message: 'Login successful', token, email: user.email });
     } catch (error) {
         console.error('Error during login:', error);

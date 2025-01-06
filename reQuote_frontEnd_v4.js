@@ -10,7 +10,7 @@ let token = null;
 let selectedQuotes = []; // Persistent array to track selected quotes
 let draggedItem = null;
 
-//------------------------SignUp and SignIn
+//------------------------SignUp and Log In
 
 // Updated Signup Logic
 signupForm.addEventListener('submit', async (e) => {
@@ -26,7 +26,9 @@ signupForm.addEventListener('submit', async (e) => {
         });
 
         if (response.ok) {
-            alert('Sign-up successful! Please log in.');
+            alert('Sign-up successful! Redirecting to login...');
+            window.location.href = 'reQuote_login_v4.html'; // Redirect to login page
+            // alert('Sign-up successful! Please log in.');
             signupForm.reset();
         } else {
             const data = await response.json();
@@ -52,10 +54,11 @@ loginForm.addEventListener('submit', async (e) => {
         });
 
         if (response.ok) {
+            console.log("Log in successful, front end");
             const data = await response.json();
             token = data.token;
             showNotification(`Welcome ${data.email}!`, 'success');
-
+            window.location.href = 'reQuote_dashboard_v4.html'; // Redirect to dashboard
             authSection.style.display = 'none';
             addQuotesSection.style.display = 'block';
             showAdminFeatures(data.email); // Show admin-only features
@@ -63,6 +66,7 @@ loginForm.addEventListener('submit', async (e) => {
             loadQuotes();
         } else {
             const data = await response.json();
+            console.log("Log in failed, front end");
             alert(`Login failed: ${data.message}`);
         }
     } catch (error) {
@@ -70,6 +74,13 @@ loginForm.addEventListener('submit', async (e) => {
         alert('Login failed.');
     }
 });
+
+// Logout function
+function logout() {
+    localStorage.removeItem('token');
+    alert('You have been logged out.');
+    window.location.href = 'reQuote_login_v4.html';
+}
 
 //---------------------------- Quotes 
 
