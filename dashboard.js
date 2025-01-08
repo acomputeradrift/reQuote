@@ -163,7 +163,7 @@ let draggedItem = null;
 function logout() {
     localStorage.removeItem('token');
     alert('You have been logged out.');
-    window.location.href = 'reQuote_login_v4.html';
+    window.location.href = 'login.html';
 }
 
 //---------------------------- Quotes 
