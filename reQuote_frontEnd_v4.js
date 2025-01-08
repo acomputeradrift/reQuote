@@ -1,3 +1,6 @@
+console.log("Is the form found?", document.getElementById('login-form'));
+
+
 const authSection = document.getElementById('auth-section');
 const addQuotesSection = document.getElementById('add-quotes-section');
 const signupForm = document.getElementById('signup-form');
@@ -12,11 +15,16 @@ let draggedItem = null;
 
 //------------------------SignUp and Log In
 
-// Updated Signup Logic
-signupForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('signup-email').value;
-    const password = document.getElementById('signup-password').value;
+//Updated Signup Logic
+document.addEventListener('DOMContentLoaded', () => {
+    const signupForm = document.getElementById('signup-form');
+    if (signupForm) {
+        console.log("Signup form detected, event listener added.");
+        signupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            console.log("Event listener triggered.");
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
 
     try {
         const response = await fetch('/signup', {
@@ -38,11 +46,49 @@ signupForm.addEventListener('submit', async (e) => {
         console.error("Error during sign-up:", error);
         alert('Sign-up failed.');
     }
+        });
+    } else {
+        console.error("Signup form not found in the DOM.");
+    }
 });
 
+// Signup Logic
+// signupForm.addEventListener('submit', async (e) => {
+//     e.preventDefault();
+//     const email = document.getElementById('signup-email').value;
+//     const password = document.getElementById('signup-password').value;
+
+//     try {
+//         const response = await fetch('/signup', {
+//             method: 'POST',
+//             headers: { 'Content-Type': 'application/json' },
+//             body: JSON.stringify({ email, password })
+//         });
+
+//         if (response.ok) {
+//             alert('Sign-up successful! Redirecting to login...');
+//             window.location.href = 'reQuote_login_v4.html'; // Redirect to login page
+//             // alert('Sign-up successful! Please log in.');
+//             signupForm.reset();
+//         } else {
+//             const data = await response.json();
+//             alert(`Sign-up failed: ${data.message}`);
+//         }
+//     } catch (error) {
+//         console.error("Error during sign-up:", error);
+//         alert('Sign-up failed.');
+//     }
+// });
+
 // Updated Login Logic
-loginForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
+document.addEventListener('DOMContentLoaded', () => {
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+        console.log("Login form detected, event listener added.");
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            console.log("Event listener triggered.");
+            e.preventDefault();
     const email = document.getElementById('login-email').value;
     const password = document.getElementById('login-password').value;
 
@@ -73,7 +119,48 @@ loginForm.addEventListener('submit', async (e) => {
         console.error("Error during login:", error);
         alert('Login failed.');
     }
+        });
+    } else {
+        console.error("Login form not found in the DOM.");
+    }
 });
+
+
+// Updated Login Logic
+// loginForm.addEventListener('submit', async (e) => {
+//     console.log("Event listener ran");
+//     e.preventDefault();
+//     const email = document.getElementById('login-email').value;
+//     const password = document.getElementById('login-password').value;
+
+//     try {
+//         const response = await fetch('/login', {
+//             method: 'POST',
+//             headers: { 'Content-Type': 'application/json' },
+//             body: JSON.stringify({ email, password })
+//         });
+
+//         if (response.ok) {
+//             console.log("Log in successful, front end");
+//             const data = await response.json();
+//             token = data.token;
+//             showNotification(`Welcome ${data.email}!`, 'success');
+//             window.location.href = 'reQuote_dashboard_v4.html'; // Redirect to dashboard
+//             authSection.style.display = 'none';
+//             addQuotesSection.style.display = 'block';
+//             showAdminFeatures(data.email); // Show admin-only features
+//             fetchSelectedQuotes(); // Fetch selected quotes from the backend
+//             loadQuotes();
+//         } else {
+//             const data = await response.json();
+//             console.log("Log in failed, front end");
+//             alert(`Login failed: ${data.message}`);
+//         }
+//     } catch (error) {
+//         console.error("Error during login:", error);
+//         alert('Login failed.');
+//     }
+// });
 
 // Logout function
 function logout() {
