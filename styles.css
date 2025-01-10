@@ -82,7 +82,7 @@ h1 {
 /*------------------------------------------- Quote Section Styling (Hidden Initially) */
 #add-quotes-section {
     margin-top: 60px;
-    display: none;
+    display: block;
     width: 100%;
     text-align: center;
 }

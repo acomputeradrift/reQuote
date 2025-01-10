@@ -5,17 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - reQuote</title>
     <link rel="stylesheet" href="styles.css">
+    <script type="module" src="login.js"></script> <!-- Removed 'defer' since type="module" defers by default -->
+    <script type=module src="common.js"></script>
 </head>
 <body>
-
     <div id="notification-container"></div>
-
-    <!-- Centered Header -->
     <h1>Welcome to reQuote v4</h1>
 
-    <!-- Authentication Section -->
     <div id="auth-section">
-        <!-- Updated Login Form -->
         <div class="form-container">
             <h2>Log In</h2>
             <form id="login-form">
@@ -26,8 +23,42 @@
             <p>Don't have an account? <a href="signup.html">Sign up here</a></p>
         </div>
     </div>
+</body>
+</html>
 
-    <script type="module" src="login.js"></script>
+
+<!--
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - reQuote</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="login.js" defer></script>
+</head>
+<body>
+
+    <div id="notification-container"></div>
+
+   
+    <h1>Welcome to reQuote v4</h1>
+
+    <div id="auth-section">
+    
+        <div class="form-container">
+            <h2>Log In</h2>
+            <form id="login-form">
+                <input type="text" id="login-email" placeholder="Email" required>
+                <input type="password" id="login-password" placeholder="Password" required>
+                <button type="submit" class="form-button">Log In</button>
+            </form>
+            <p>Don't have an account? <a href="signup.html" >Sign up here</a></p>
+        </div>
+    </div>
+
+
 
 </body>
 </html>
+-->

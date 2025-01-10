@@ -1,52 +1,45 @@
-import { showAdminFeatures } from './dashboard.js';
-import { fetchSelectedQuotes } from './dashboard.js';
-import { loadQuotes } from './dashboard.js';
-import { showNotification } from './dashboard.js';
+import { fetchSelectedQuotes, loadQuotes } from './dashboard.js';
+import { setToken, showNotification } from './common.js';
 
+// The `defer` attribute ensures the DOM is ready
 const loginForm = document.getElementById('login-form');
-let email = null; // Declare a global email variable
 
-// Updated Login Logic
-document.addEventListener('DOMContentLoaded', () => {
-    const loginForm = document.getElementById('login-form');
-    if (loginForm) {
-        console.log("Login form detected, event listener added.");
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            console.log("Event listener triggered.");
-            e.preventDefault();
-    const email = document.getElementById('login-email').value;
-    const password = document.getElementById('login-password').value;
+// Check if the form exists before adding the event listener
+if (loginForm) {
+    console.log("Login form detected, event listener added.");
 
-    try {
-        const response = await fetch('/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
-        });
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        console.log("Login form submitted.");
 
-        if (response.ok) {
-            console.log("Log in successful, front end");
-            const data = await response.json();
-            token = data.token;
-            showNotification(`Welcome ${data.email}!`, 'success');
-            window.location.href = 'dashboard'; // Redirect to dashboard
-            // authSection.style.display = 'none';
-            // addQuotesSection.style.display = 'block';
-            // showAdminFeatures(data.email); // Show admin-only features
-            fetchSelectedQuotes(); // Fetch selected quotes from the backend
-            loadQuotes();
-        } else {
-            const data = await response.json();
-            console.log("Log in failed, front end");
-            alert(`Login failed: ${data.message}`);
+        const emailInput = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+
+        try {
+            const response = await fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: emailInput, password })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setToken(data.token);
+                showNotification(`Welcome ${data.email}!`, 'success');
+                
+                // Redirect and ensure the dashboard scripts load properly
+                window.location.href = 'dashboard.html';
+                fetchSelectedQuotes();
+                loadQuotes();
+            } else {
+                const errorData = await response.json();
+                showNotification(`Login failed: ${errorData.message}`, 'error');
+            }
+        } catch (error) {
+            console.error("Error during login:", error);
+            showNotification('Login failed due to a network error.', 'error');
         }
-    } catch (error) {
-        console.error("Error during login:", error);
-        alert('Login failed.');
-    }
-        });
-    } else {
-        console.error("Login form not found in the DOM.");
-    }
-});
+    });
+} else {
+    console.error("Login form not found in the DOM.");
+}

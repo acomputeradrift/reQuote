@@ -5,12 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - reQuote</title>
     <link rel="stylesheet" href="styles.css">
+    <script type=module src="dashboard.js"></script>
+    <script type=module src="common.js"></script>
 </head>
 <body>
+    <div id="notification-container"></div>
     <h1>Welcome to Your Dashboard</h1>
-    <p>This page is protected. You must be logged in to view this content.</p>
+    <!-- <p>This page is protected. You must be logged in to view this content.</p>
     <button onclick="logout()">Logout</button>
-    <!-- Add Quotes Section (Hidden Initially) -->
+    Add Quotes Section (Hidden Initially) -->
     <div id="add-quotes-section">
         <h2>Add Quotes</h2>
         <form id="add-quote-form">
@@ -18,13 +21,12 @@
             <input type="text" id="quote-author" placeholder="Author" required>
             <input type="text" id="quote-source" placeholder="Source">
             <button type="submit">Add Quote</button>
-            <button id="generate-test-quotes" style="display: none;">Generate Test Quotes</button>
         </form>
     </div>
     <div id="list-quotes-section">
         <ul id="quotes-list"></ul>
     </div>
-    <script type="module" src="dashboard.js"></script>
+    
     <!-- <script>
         // Authentication check for protected pages
         window.onload = function () {
