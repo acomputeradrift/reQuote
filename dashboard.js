@@ -105,21 +105,29 @@ function renderQuoteBox(quote) {
         authorSpan.textContent = quote.author;
         authorSpan.className = 'quote-author-normal';
 
+        // Create a span for the separator
+        const authorSourceSeparator = document.createElement('span');
+        authorSourceSeparator.textContent = ', ';
+        authorSourceSeparator.className = 'quote-author-normal'; // Use the same styling as the author
+
         const sourceSpan = document.createElement('span');
         if (quote.source && quote.source.trim() !== '') {
-            sourceSpan.innerHTML = `, ${amazonLinkHTML}`;
+            sourceSpan.innerHTML = `${amazonLinkHTML}`;
             sourceSpan.className = 'quote-source-italic';
+            sourceSpan.title = 'Search for this book on Amazon'
         }
 
         // Append both spans inside the same element
         authorAndSource.appendChild(authorSpan);
         if (quote.source && quote.source.trim() !== '') {
+            authorAndSource.appendChild(authorSourceSeparator);
             authorAndSource.appendChild(sourceSpan);
         }
 
         // Create the reordering icon
         const reorderIcon = document.createElement('div');
         reorderIcon.className = 'reorder-icon'; // Add a class for styling
+        reorderIcon.title = 'Drag to reorder'; // Hover message
 
         // Add the three lines to the reorder icon
         for (let i = 0; i < 3; i++) {
@@ -129,8 +137,9 @@ function renderQuoteBox(quote) {
 
         // Create a delete button
         const deleteButton = document.createElement('button');
-        deleteButton.textContent = 'X'; // Set the text as "X"
         deleteButton.className = 'delete-button'; // Add a class for styling
+        deleteButton.innerHTML = '<span style="color: white; font-weight: bold;">&#10006;</span>';
+        deleteButton.title = 'Delete this quote'; // Hover message
         deleteButton.addEventListener('click', async () => {
             if (confirm('Are you sure you want to delete this quote?')) {
                 await deleteQuote(quote._id); // Call the delete function
@@ -141,7 +150,8 @@ function renderQuoteBox(quote) {
             // Create email icon
         const emailIcon = document.createElement('div');
         emailIcon.className = 'email-icon'; // Add a class for styling
-        emailIcon.innerHTML = '&#9992;'; // Airplane icon
+        emailIcon.innerHTML = '&#9993;'; // Email icon
+        emailIcon.title = 'Add or remove this quote from your email schedule'; // Hover message
 
         // Toggle selection logic
         if (selectedQuotes.includes(quote._id)) {

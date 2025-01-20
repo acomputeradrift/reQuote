@@ -92,22 +92,6 @@ h1 {
     text-align: center;
 }
 
-#generate-test-quotes {
-    margin-top: 10px;
-    display: block;
-    margin: 20px auto; /* Auto centers horizontally */
-    background: #2196f3;
-    color: white;
-    border: none;
-    padding: 10px;
-    border-radius: 8px;
-    cursor: pointer;
-}
-
-#generate-test-quotes:hover {
-    background: #1e88e5;
-}
-
 /*----------------------------------------------------------Quote Box */
 /* Style for the quote box */
 .quote-box {
@@ -158,19 +142,23 @@ h1 {
     color: #777;
 }
 
-/* Delete Button Styling (No Changes) */
+.quote-source-italic:hover {
+    text-decoration: underline;
+    text-decoration-color:#2196f3;
+    text-decoration-thickness: 0.1em;
+}
+
+/* Delete Button Styling */
 .delete-button {
     position: absolute;
     top: 10px;
     right: 10px;
     background-color: red;
-    color: white;
+    color: white; /* White "X" */
     border: none;
     border-radius: 50%;
     width: 30px;
     height: 30px;
-    font-size: 1em;
-    font-weight: bold;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -185,6 +173,7 @@ h1 {
 }
 
 /* Reordering Icon Styling (No Changes) */
+/*
 .reorder-icon {
     position: absolute;
     left: 10px;
@@ -203,15 +192,49 @@ h1 {
     height: 2px;
     background-color: rgba(185, 184, 184, 0.96);
     border-radius: 1px;
+}*/
+
+/* Reordering Icon Styling */
+.reorder-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 30px;
+    height: 30px;
+    background-color: white; /* White circular background */
+    border-radius: 50%; /* Make it circular */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    cursor: grab; /* Indicate draggable behavior */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Add shadow for a 3D effect */
+    transition: transform 0.2s ease;
 }
 
-/* Style for the airplane icon */
+/* Lines inside the reorder icon */
+.reorder-icon div {
+    width: 50%; /* Make the lines smaller than the container */
+    height: 2px;
+    background-color: black; /* Black lines */
+    border-radius: 1px; /* Slight rounding */
+    margin: 2px 0; /* Space between lines */
+}
+
+/* Hover effect for reorder icon */
+.reorder-icon:hover {
+    transform: scale(1.1); /* Slightly enlarge on hover */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+
+/* Style for the email icon */
 .email-icon {
     position: absolute;
-    top: 10px;
-    right: 50px; /* Adjust positioning relative to the delete button */
+    bottom: 10px;
+    right: 10px; /* Adjust positioning relative to the delete button */
     background-color: white;
-    border: 2px solid #ccc;
     border-radius: 50%;
     width: 30px;
     height: 30px;
@@ -219,29 +242,21 @@ h1 {
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .email-icon:hover {
-    border-color: #4caf50; /* Green border on hover */
+    transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
+
 
 .email-icon.selected {
     background-color: #4caf50; /* Green fill for selected state */
     border-color: #4caf50;
     color: white; /* Change icon color to white */
 }
-
-
-/* Highlight selected quotes */
-.quote-box.selected {
-    border: 2px solid #4caf50; /* Green border for selected quotes */
-    background-color: #e8f5e9; /* Light green background */
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    transform: scale(1.02); /* Slightly enlarge */
-    transition: all 0.2s ease; /* Smooth transition */
-}
-
 
 /* ------------------------------------------Notifications */
 #notification-container {
