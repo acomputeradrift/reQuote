@@ -1,4 +1,4 @@
-import { fetchSelectedQuotes, loadQuotes } from './dashboard.js';
+//import { fetchSelectedQuotes, loadQuotes } from './dashboard.js';
 import { setToken, showNotification } from './common.js';
 
 // The `defer` attribute ensures the DOM is ready
@@ -29,8 +29,6 @@ if (loginForm) {
                 
                 // Redirect and ensure the dashboard scripts load properly
                 window.location.href = 'dashboard.html';
-                fetchSelectedQuotes();
-                loadQuotes();
             } else {
                 const errorData = await response.json();
                 showNotification(`Login failed: ${errorData.message}`, 'error');

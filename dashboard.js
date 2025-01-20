@@ -13,6 +13,13 @@ const generateTestQuotesButton = document.getElementById('generate-test-quotes')
 
 let draggedItem = null;
 
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log("Dashboard loaded");
+    await fetchSelectedQuotes();
+    await loadQuotes();
+});
+
+
 // ✅ Check if the form exists before adding an event listener
 if (addQuoteForm) {
     addQuoteForm.addEventListener('submit', async (e) => {
@@ -48,7 +55,7 @@ if (addQuoteForm) {
 
 // ✅ Safe Loading Quotes Function
 export async function loadQuotes() {
-    console.log("loadQuotes ran");
+    console.log("loadQuotes ran (dashboard.js)");
     try {
         const response = await fetch('/quotes', {
             method: 'GET',
@@ -58,7 +65,7 @@ export async function loadQuotes() {
         });
 
         if (response.ok) {
-            console.log("loadQuotes response ok");
+            console.log("loadQuotes got an OK response from backend");
             const quotes = await response.json();
             quotes.sort((a, b) => a.order - b.order); 
             quotesList.innerHTML = '';
@@ -67,16 +74,18 @@ export async function loadQuotes() {
                             renderQuoteBox(quote);
                         });
         } else {
+            console.log("loadQuotes DID NOT get an OK response from backend");
             console.error('Failed to load quotes');
         }
     } catch (error) {
+        console.log("loadQuotes failed completely");
         console.error('Error loading quotes:', error);
     }
 }
 
 //Render Each Quote Box
 function renderQuoteBox(quote) {
-        console.log("renderQuoteBox ran");
+        console.log("renderQuoteBox ran in dashboard.js");
         const amazonLinkHTML = generateAmazonLink(quote.author, quote.source);
         const quoteBox = document.createElement('div'); // Create a container for the quote
         quoteBox.className = 'quote-box'; // Add a class for styling
@@ -87,20 +96,23 @@ function renderQuoteBox(quote) {
         if (selectedQuotes.includes(quote._id)) {
             quoteBox.classList.add('selected');
         }
-
-    // Handle click to toggle selection
+        // Handle click to toggle selection
         quoteBox.addEventListener('click', async (event) => {
-            if (selectedQuotes.includes(quote._id)) {
-                // Unselect the quote
-                selectedQuotes = selectedQuotes.filter((id) => id !== quote._id);
-                quoteBox.classList.remove('selected'); // Remove selected style
-            } else if (selectedQuotes.length < 21) {
-                // Select the quote
-                selectedQuotes.push(quote._id);
-                quoteBox.classList.add('selected'); // Add selected style
-            } else {
-                alert('You can select up to 21 quotes only.');
-            }
+        const index = selectedQuotes.indexOf(quote._id);
+
+        if (index > -1) {
+            // Unselect the quote
+            selectedQuotes.splice(index, 1);
+            quoteBox.classList.remove('selected');
+        } else if (selectedQuotes.length < 21) {
+            // Select the quote
+            selectedQuotes.push(quote._id);
+            quoteBox.classList.add('selected');
+        } else {
+            alert('You can select up to 21 quotes only.');
+        }
+
+        console.log("Updated selectedQuotes:", selectedQuotes);
             // Send the updated selection to the backend
             await updateSelectedQuotesInBackend();
             event.stopPropagation(); // Prevent event bubbling

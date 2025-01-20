@@ -152,7 +152,7 @@ app.post('/quotes', authenticate, async (req, res) => {
         });
 
         await quote.save();
-        console.log('\nQuote object saved');
+        console.log('Quote object saved');
         // Add the quote to the user's quotes field
         const user = await User.findById(req.userId);
         if (user) {
