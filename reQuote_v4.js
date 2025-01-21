@@ -108,7 +108,8 @@ app.post('/signup', async (req, res) => {
         res.status(500).json({ message: 'Error signing up', error });
     }
 });
-//Login (logging...)
+
+//Login (logged...)
 app.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
@@ -123,11 +124,32 @@ app.post('/login', async (req, res) => {
         const token = jwt.sign({ userId: user._id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
         // Send token and email back to the frontend
-        console.log(`${user.email} logged in\n`);
+        console.log(`${user.email} logged in`);
         res.status(200).json({ message: 'Login successful', token, email: user.email });
     } catch (error) {
         console.error('Error during login:', error);
         res.status(500).json({ message: 'Error logging in', error });
+    }
+});
+
+//UPDATED logout router
+
+app.post('/logout', (req, res) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        console.log('Logout attempt with no token provided.');
+        return res.status(401).send({ message: 'No token provided' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        console.log(`${decoded.email} logged out.`);
+        return res.status(200).send({ message: 'Logout successful' });
+    } catch (error) {
+        console.log('Invalid token during logout:', error.message);
+        return res.status(403).send({ message: 'Invalid token' });
     }
 });
 

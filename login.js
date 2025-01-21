@@ -1,4 +1,3 @@
-//import { fetchSelectedQuotes, loadQuotes } from './dashboard.js';
 import { setToken, showNotification } from './common.js';
 
 // The `defer` attribute ensures the DOM is ready
@@ -26,7 +25,6 @@ if (loginForm) {
                 const data = await response.json();
                 setToken(data.token);
                 showNotification(`Welcome ${data.email}!`, 'success');
-                
                 // Redirect and ensure the dashboard scripts load properly
                 window.location.href = 'dashboard.html';
             } else {

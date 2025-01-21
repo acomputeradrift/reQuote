@@ -1,4 +1,4 @@
-import { getToken, showNotification, logout, selectedQuotes } from './common.js';
+import { getToken, showNotification, decodeToken, logout, selectedQuotes } from './common.js';
 
 // Ensure token is declared properly
 const token = getToken(); 
@@ -13,12 +13,41 @@ const generateTestQuotesButton = document.getElementById('generate-test-quotes')
 
 let draggedItem = null;
 
+//----------------------------------Event Listeners
+
 document.addEventListener('DOMContentLoaded', async () => {
     console.log("Dashboard loaded");
     await fetchSelectedQuotes();
     await loadQuotes();
 });
 
+//Auto Logout
+document.addEventListener('DOMContentLoaded', () => {
+    const token = getToken();
+    if (token) {
+        const { exp } = decodeToken(token); // Decode the token to get the expiration time
+        const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
+        const timeUntilExpiration = (exp - currentTime) * 1000; // Time in milliseconds
+
+        if (timeUntilExpiration > 0) {
+            // Set a timeout to log the user out when the token expires
+            setTimeout(() => {
+                alert('Your session has expired. Please log in again.');
+                logout();
+            }, timeUntilExpiration);
+        } else {
+            // If the token is already expired, log the user out immediately
+            logout();
+        }
+    }
+});
+
+// Add an event listener for the logout button
+document.getElementById('logout-button').addEventListener('click', () => {
+    logout(); // Call the shared logout function
+})
+
+//--------------------------------------------Quote Management
 
 // ✅ Check if the form exists before adding an event listener
 if (addQuoteForm) {
@@ -89,7 +118,7 @@ function renderQuoteBox(quote) {
         const quoteBox = document.createElement('div'); // Create a container for the quote
         quoteBox.className = 'quote-box'; // Add a class for styling
         quoteBox.dataset.id = quote._id; // Store the quote ID for reference
-
+        
         // Add the quote content
         const content = document.createElement('p');
         content.textContent = quote.content;
