@@ -172,28 +172,6 @@ h1 {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
-/* Reordering Icon Styling (No Changes) */
-/*
-.reorder-icon {
-    position: absolute;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    width: 30px;
-    height: 20px;
-    cursor: grab;
-}
-
-.reorder-icon div {
-    width: 100%;
-    height: 2px;
-    background-color: rgba(185, 184, 184, 0.96);
-    border-radius: 1px;
-}*/
-
 /* Reordering Icon Styling */
 .reorder-icon {
     position: absolute;

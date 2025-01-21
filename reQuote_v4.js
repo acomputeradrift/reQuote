@@ -9,6 +9,7 @@ require('dotenv').config();
 const nodemailer = require('nodemailer');
 const PORT = process.env.PORT || 3000;
 const cron = require('node-cron')
+const { generateAmazonLink } = require('./utils/amazonLink');
 
 // Initialize constants or configurations
 const transporter = nodemailer.createTransport({
@@ -43,6 +44,7 @@ const quoteSchema = new mongoose.Schema({
     content: { type: String, required: true },
     author: { type: String, required: true },
     source: { type: String, default: 'Unknown' }, // Default value for source
+    sourceLink: { type: String, default: null },  // Amazon link for the book
     order: Number, // Add the order attribute
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 });
@@ -56,7 +58,7 @@ const scheduleSchema = new mongoose.Schema({
 const User = mongoose.model('User', userSchema);
 const Quote = mongoose.model('Quote', quoteSchema);
 const Schedule = mongoose.model('Schedule', scheduleSchema);
-
+module.exports = { Quote };
 //------------------------------------------------------ Initialize the Express app
 const app = express();
 app.use(express.json());
@@ -138,6 +140,8 @@ app.post('/quotes', authenticate, async (req, res) => {
     }
 
     try {
+        // Generate the Amazon link (if source is provided)
+        const sourceLink = source ? generateAmazonLink(author, source) : null;
         // Calculate the next available order for the user's quotes
         const userQuotes = await Quote.find({ user: req.userId });
         const nextOrder = userQuotes.length; // Assign the next position in the list
@@ -147,6 +151,7 @@ app.post('/quotes', authenticate, async (req, res) => {
             content,
             author,
             source,
+            sourceLink, // Save the generated Amazon link
             order: nextOrder, // Assign order
             user: req.userId, // Associate the quote with the logged-in user
         });
@@ -308,53 +313,53 @@ app.get('/quotes/search', authenticate, async (req, res) => {
     }
 });
 
-//Generate 30 quotes for testing
-app.post('/quotes/generate', authenticate, async (req, res) => {
-    try {
-        const user = await User.findById(req.userId);
-        if (!user || user.email !== 'feeny.jamie@gmail.com') {
-            return res.status(403).json({ message: 'Unauthorized' });
-        }
+//Update 2
 
-        const testQuotes = [];
-        for (let i = 1; i <= 30; i++) {
-            testQuotes.push({
-                content: `Test Quote ${i}`,
-                author: `Author ${i}`,
-                user: req.userId,
-            });
-        }
-
-        await Quote.insertMany(testQuotes);
-        res.status(201).json({ message: '30 test quotes generated successfully.' });
-    } catch (error) {
-        console.error('Error generating test quotes:', error);
-        res.status(500).json({ message: 'Failed to generate test quotes.' });
-    }
-});
-
-//Function to send an email with HTML and a website link
 async function sendEmail(to, subject, quote) {
     try {
+        // Construct the source HTML with the clickable link or fallback
+        const sourceHTML = quote.sourceLink
+            ? `<a href="${quote.sourceLink}" target="_blank" style="font-style: italic; color: #2196F3; text-decoration: none;" 
+                onmouseover="this.style.textDecoration='underline'; this.style.textDecorationColor='#2196F3'; this.style.textDecorationThickness='0.1em';"
+                onmouseout="this.style.textDecoration='none';">${quote.source}</a>`
+            : quote.source
+            ? `<span style="font-style: italic; color: #777;">${quote.source}</span>`
+            : `<span style="font-style: italic; color: #777;">(unsourced)</span>`;
+
+        // Construct the email content
         const emailContent = `
-            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; padding: 20px; border: 1px solid #ddd; border-radius: 10px; max-width: 600px; margin: auto;">
-                <p style="font-size: 1.2rem; font-style: italic;">${quote.content}</p>
-                <p style="font-weight: bold; margin-top: 10px;">- ${quote.author}</p>
-                ${quote.source ? `<p style="color: #777; font-style: italic;">Source: ${quote.source}</p>` : ''}
+            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; padding: 20px; border: 1px solid #ddd; border-radius: 10px; max-width: 800px; margin: 0 auto; text-align: left;">
+                <!-- Quote Content -->
+                <p style="font-size: 1.4em; font-style: normal; margin: 0 0 10px 0; color: #333; text-align: left; padding-left: 10px; padding-right: 10px;">
+                    ${quote.content}
+                </p>
+                
+                <!-- Author and Source -->
+                <p style="font-size: 1.2em; color: #333; text-align: right; margin: 0; padding-right: 100px;">
+                    <span style="font-weight: bold;">${quote.author}, </span>
+
+                    ${quote.source ? `<span style="font-style: italic; color: ${quote.sourceLink ? '#2196F3' : '#777'}; text-decoration: ${quote.sourceLink ? 'underline' : 'none'};"><a href="${quote.sourceLink || '#'}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: inherit;">${quote.source}</a></span>` : ''}
+                </p>
+                
+                <!-- Separator -->
                 <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+                
+                <!-- Footer Link -->
                 <p style="text-align: center; font-size: 0.9rem;">
                     🌟 <a href="http://206.189.153.211" style="color: #2196F3; text-decoration: none;">Visit reQuote for more inspiration!</a> 🌟
                 </p>
             </div>
         `;
 
+        // Send the email using the transporter
         await transporter.sendMail({
             from: process.env.EMAIL_USER,
             to,
             subject,
-            html: emailContent, // Use HTML instead of plain text
+            html: emailContent, // Use HTML for rich content
         });
-        console.log(`Email "${quote.content}" sent to ${to}`);
+
+        console.log(`Email ${quote.content} from ${quote.source} by ${quote.author} sent to ${to}`);
     } catch (error) {
         console.error('Error sending email:', error);
     }
@@ -363,7 +368,7 @@ async function sendEmail(to, subject, quote) {
 //-------------------------------------------------Cron Jobs
 //cron.schedule('* * * * *', async () => {    //sends every minute FOR TESTING
 cron.schedule('0 6 * * *', async () => {
-    console.log('\nRunning email scheduler...');
+    console.log('Running email scheduler...');
     try {
         const schedules = await Schedule.find({}).populate('selectedQuotes user');
         
