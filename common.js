@@ -3,12 +3,6 @@
 let token = localStorage.getItem('token') || null; 
 export let selectedQuotes = [];
 
-// Exported functions for shared usage
-// export function setToken(newToken) {
-//     token = newToken;
-//     localStorage.setItem('token', newToken);  // Save to local storage for persistence
-// }
-
 export function setToken(newToken) {
     if (newToken) {
         const decodedToken = decodeToken(newToken); // Use your decodeToken function
@@ -55,18 +49,6 @@ export function checkTokenExpiration() {
     }
 }
 
-// export function checkTokenExpiration() {
-//     const tokenExpiration = localStorage.getItem('tokenExpiration');
-//     if (tokenExpiration && Date.now() > parseInt(tokenExpiration)) {
-//         alert('Your session has expired. You will be logged out.');
-//         logout(); // Call the logout function
-//     }
-// }
-
-// // Set an interval to check token expiration every minute
-// setInterval(checkTokenExpiration, 60000);
-
-
 //------------------------------------Notification Management
 
 //Show Notification
@@ -95,74 +77,39 @@ export function showNotification(message, type = 'info') {
 
 //--------------------------------------------Log Out
 
-//new Updated Logout
+//UPDATED
 
-export function logout() {
+export function logout(isAutoLogout = false) {
     const token = getToken();
-    if (!token) {
-        alert('You are not logged in.');
-        return;
-    }
+    const email = token ? decodeToken(token)?.email : 'Unknown';
 
-    // Decode token to get the user's email
-    const email = decodeToken(token)?.email;
+    console.log(`${email} is logging out. AutoLogout: ${isAutoLogout}`);
 
-    // Notify the server (for backend logging)
     fetch('/logout', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
     }).then((response) => {
         if (response.ok) {
-            // Show success notification on the frontend
-            showNotification(`${email || 'User'} logged out successfully`, 'success');
-            
-            // Clear the token and redirect to login
-            localStorage.removeItem('token');
-            localStorage.removeItem('tokenExpiration');
-            setTimeout(() => {
-                window.location.href = 'login.html';
-            }, 2000); // Optional delay for notification visibility
+            response.json().then((data) => {
+                console.log(data.message);
+                showNotification(`${email || 'User'} logged out successfully`, 'success');
+            });
         } else {
             console.error('Failed to notify server about logout.');
             showNotification('Logout failed. Please try again.', 'error');
         }
+        // Clear token and redirect regardless of backend response
+        localStorage.removeItem('token');
+        localStorage.removeItem('tokenExpiration');
+        window.location.href = 'login.html';
     }).catch((error) => {
         console.error('Error sending logout request:', error);
         showNotification('Logout failed due to a network error.', 'error');
+        // Clear token and redirect regardless of network issues
+        localStorage.removeItem('token');
+        localStorage.removeItem('tokenExpiration');
+        window.location.href = 'login.html';
     });
 }
-
-// export function logout() {
-//     const token = getToken();
-//     if (!token) {
-//         alert('You are not logged in.');
-//         return;
-//     }
-//     // Decode token to get the user's email
-//     const email = decodeToken(token)?.email;
-
-//     // Notify the server (optional: keep this for backend logging)
-//     fetch('/logout', {
-//         method: 'POST',
-//         headers: { 'Authorization': `Bearer ${token}` },
-//     }).then((response) => {
-//         if (response.ok) {
-//             // Show success notification on the frontend
-//             showNotification(`${email} logged out successfully`, 'success');
-            
-//             // Clear the token and redirect to login
-//             localStorage.removeItem('token');
-//             setTimeout(() => {
-//                 window.location.href = 'login.html';
-//             }, 2000); // Optional delay for notification visibility
-//         } else {
-//             console.error('Failed to notify server about logout.');
-//             showNotification('Logout failed. Please try again.', 'error');
-//         }
-//     }).catch((error) => {
-//         console.error('Error sending logout request:', error);
-//         showNotification('Logout failed due to a network error.', 'error');
-//     });
-// }
 
 

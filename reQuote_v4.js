@@ -1,16 +1,24 @@
 // reQuote_v4.js
+import dotenv from 'dotenv';
+
+// Load environment variables from .env file
+dotenv.config();
+
+
 import { generateAmazonLink } from './utils/amazonLink.js';
 
-// Import dependencies (always at the top)
-const express = require('express');
-const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-require('dotenv').config();
-const nodemailer = require('nodemailer');
+import express from 'express';
+import mongoose from 'mongoose';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+// import dotenv from 'dotenv';
+import nodemailer from 'nodemailer';
+import cron from 'node-cron';
+
+// Load environment variables
+// dotenv.config();
+
 const PORT = process.env.PORT || 3000;
-const cron = require('node-cron')
-//const { generateAmazonLink } = require('./utils/amazonLink');
 
 // Initialize constants or configurations
 const transporter = nodemailer.createTransport({
@@ -59,10 +67,18 @@ const scheduleSchema = new mongoose.Schema({
 const User = mongoose.model('User', userSchema);
 const Quote = mongoose.model('Quote', quoteSchema);
 const Schedule = mongoose.model('Schedule', scheduleSchema);
-module.exports = { Quote };
+//module.exports = { Quote };
 //------------------------------------------------------ Initialize the Express app
 const app = express();
 app.use(express.json());
+
+app.use((req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    next();
+});
+
 
 // Middleware
 const authenticate = async (req, res, next) => {
@@ -133,28 +149,29 @@ app.post('/login', async (req, res) => {
     }
 });
 
-//UPDATED logout route
-
+//UPDATED logout route (logged...)
 app.post('/logout', (req, res) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-
+    const token = req.headers.authorization?.split(' ')[1];
     if (!token) {
-        console.log('Logout attempt with no token provided.');
-        return res.status(401).send({ message: 'No token provided' });
+        return res.status(400).json({ message: 'No token provided' });
     }
 
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        console.log(`${decoded.email} logged out.`);
-        return res.status(200).send({ message: 'Logout successful' });
-    } catch (error) {
-        console.log('Invalid token during logout:', error.message);
-        return res.status(403).send({ message: 'Invalid token' });
-    }
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+        if (err) {
+            if (err.name === 'TokenExpiredError') {
+                console.log(`${decoded.email} logged out for expired token`);
+                return res.status(200).json({ message: 'Token expired, but logout successful' });
+            }
+            console.error('Invalid token during logout:', err.message);
+            return res.status(401).json({ message: 'Invalid token' });
+        }
+
+        console.log(`${decoded.email} logged out manually`);
+        res.status(200).json({ message: 'Logout successful' });
+    });
 });
 
-// Add Quote (logging...)
+// Add Quote (logged...)
 app.post('/quotes', authenticate, async (req, res) => {
     const { content, author, source } = req.body;
 
@@ -337,7 +354,6 @@ app.get('/quotes/search', authenticate, async (req, res) => {
 });
 
 //Update 2
-
 async function sendEmail(to, subject, quote) {
     try {
         // Construct the source HTML with the clickable link or fallback

@@ -18,43 +18,27 @@ let draggedItem = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log("Dashboard loaded");
-    await fetchSelectedQuotes();
-    await loadQuotes();
-});
 
-//Updated Auto Logout
-
-document.addEventListener('DOMContentLoaded', () => {
-    checkTokenExpiration(); // Check token expiration immediately
-
+    // Check for token
     const token = getToken();
     if (!token) {
         alert('You need to log in first!');
         window.location.href = 'login.html';
+        return; // Stop further execution if not logged in
+    }
+
+    // Check if the token has expired
+    checkTokenExpiration();
+
+    // Fetch selected quotes and load quotes
+    try {
+        await fetchSelectedQuotes();
+        await loadQuotes();
+    } catch (error) {
+        console.error("Error during dashboard initialization:", error);
+        alert("Failed to load quotes. Please try again.");
     }
 });
-
-// document.addEventListener('DOMContentLoaded', () => {
-//     const token = getToken();
-//     if (token) {
-//         const { exp } = decodeToken(token); // Decode the token to get the expiration time
-//         const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
-//         const timeUntilExpiration = (exp - currentTime) * 1000; // Time in milliseconds
-
-//         if (timeUntilExpiration > 0) {
-//             // Set a timeout to log the user out when the token expires
-//             setTimeout(() => {
-//                 alert('Your session has expired. Please log in again.');
-//                 logout();
-//             }, timeUntilExpiration);
-//         } else {
-//             // If the token is already expired, log the user out immediately
-//             logout();
-//         }
-//     }
-// });
-
-
 
 // Add an event listener for the logout button
 document.getElementById('logout-button').addEventListener('click', () => {
