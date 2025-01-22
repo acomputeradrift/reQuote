@@ -1,4 +1,5 @@
-import { getToken, showNotification, decodeToken, logout, selectedQuotes } from './common.js';
+import { getToken, showNotification, checkTokenExpiration, logout, selectedQuotes } from './common.js';
+import { generateAmazonLink } from './utils/amazonLink.js';
 
 // Ensure token is declared properly
 const token = getToken(); 
@@ -21,26 +22,39 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadQuotes();
 });
 
-//Auto Logout
-document.addEventListener('DOMContentLoaded', () => {
-    const token = getToken();
-    if (token) {
-        const { exp } = decodeToken(token); // Decode the token to get the expiration time
-        const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
-        const timeUntilExpiration = (exp - currentTime) * 1000; // Time in milliseconds
+//Updated Auto Logout
 
-        if (timeUntilExpiration > 0) {
-            // Set a timeout to log the user out when the token expires
-            setTimeout(() => {
-                alert('Your session has expired. Please log in again.');
-                logout();
-            }, timeUntilExpiration);
-        } else {
-            // If the token is already expired, log the user out immediately
-            logout();
-        }
+document.addEventListener('DOMContentLoaded', () => {
+    checkTokenExpiration(); // Check token expiration immediately
+
+    const token = getToken();
+    if (!token) {
+        alert('You need to log in first!');
+        window.location.href = 'login.html';
     }
 });
+
+// document.addEventListener('DOMContentLoaded', () => {
+//     const token = getToken();
+//     if (token) {
+//         const { exp } = decodeToken(token); // Decode the token to get the expiration time
+//         const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
+//         const timeUntilExpiration = (exp - currentTime) * 1000; // Time in milliseconds
+
+//         if (timeUntilExpiration > 0) {
+//             // Set a timeout to log the user out when the token expires
+//             setTimeout(() => {
+//                 alert('Your session has expired. Please log in again.');
+//                 logout();
+//             }, timeUntilExpiration);
+//         } else {
+//             // If the token is already expired, log the user out immediately
+//             logout();
+//         }
+//     }
+// });
+
+
 
 // Add an event listener for the logout button
 document.getElementById('logout-button').addEventListener('click', () => {
@@ -282,8 +296,6 @@ async function updateSelectedQuotesInBackend() {
     }
 }
 
-//------------------------Quote Management
-
 //Save Quote Order
 async function saveOrder() {
     try {
@@ -340,7 +352,7 @@ async function deleteQuote(quoteId) {
     }
 }
 
-//Drag-and-Drop Handlers
+//---------------------------------------Drag-and-Drop Handlers
 
 // Corrected dragStart handler for dragging the entire quoteBox only when clicking the reorderIcon
 function handleDragStart(event) {
@@ -389,20 +401,20 @@ async function handleDrop(event) {
 }
 
 //updated 
-function generateAmazonLink(author, source) {
-    if (!author || !source) {
-        console.warn('Author or source missing for Amazon link generation.');
-        return ''; // Return empty if either is missing
-    }
+// function generateAmazonLink(author, source) {
+//     if (!author || !source) {
+//         console.warn('Author or source missing for Amazon link generation.');
+//         return ''; // Return empty if either is missing
+//     }
 
-    // Encode the search terms for the URL
-    const query = encodeURIComponent(`${author} ${source}`);
-    const amazonURL = `https://www.amazon.com/s?k=${query}&tag=YOUR_AFFILIATE_TAG`;
+//     // Encode the search terms for the URL
+//     const query = encodeURIComponent(`${author} ${source}`);
+//     const amazonURL = `https://www.amazon.com/s?k=${query}&tag=YOUR_AFFILIATE_TAG`;
 
-    // Return a properly formatted and clickable link as HTML
+//     // Return a properly formatted and clickable link as HTML
 
-    return `<a href="${amazonURL}" target="_blank" rel="noopener noreferrer" style="color: #2196F3; text-decoration: none;">${source}</a>`;
+//     return `<a href="${amazonURL}" target="_blank" rel="noopener noreferrer" style="color: #2196F3; text-decoration: none;">${source}</a>`;
 
-}
+// }
 
 

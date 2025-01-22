@@ -25,6 +25,7 @@ if (loginForm) {
                 const data = await response.json();
                 setToken(data.token);
                 showNotification(`Welcome ${data.email}!`, 'success');
+                localStorage.setItem('email', data.email); // Save email for logout notifications
                 // Redirect and ensure the dashboard scripts load properly
                 window.location.href = 'dashboard.html';
             } else {

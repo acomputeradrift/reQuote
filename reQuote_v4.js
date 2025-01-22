@@ -1,4 +1,5 @@
 // reQuote_v4.js
+import { generateAmazonLink } from './utils/amazonLink.js';
 
 // Import dependencies (always at the top)
 const express = require('express');
@@ -9,7 +10,7 @@ require('dotenv').config();
 const nodemailer = require('nodemailer');
 const PORT = process.env.PORT || 3000;
 const cron = require('node-cron')
-const { generateAmazonLink } = require('./utils/amazonLink');
+//const { generateAmazonLink } = require('./utils/amazonLink');
 
 // Initialize constants or configurations
 const transporter = nodemailer.createTransport({
@@ -132,7 +133,7 @@ app.post('/login', async (req, res) => {
     }
 });
 
-//UPDATED logout router
+//UPDATED logout route
 
 app.post('/logout', (req, res) => {
     const authHeader = req.headers['authorization'];
