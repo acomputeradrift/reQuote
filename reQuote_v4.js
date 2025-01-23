@@ -149,7 +149,7 @@ app.post('/login', async (req, res) => {
     }
 });
 
-//UPDATED logout route (logged...)
+//logout route (logged...)
 app.post('/logout', (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) {
@@ -236,6 +236,42 @@ app.post('/quotes/reorder', authenticate, async (req, res) => {
     } catch (error) {
         console.error('Error updating order (backend):', error);
         res.status(500).json({ message: 'Failed to update order (backend)' });
+    }
+});
+
+//Edit Quote
+app.put('/quotes/:id', async (req, res) => {
+    try {
+        const { id } = req.params; // Extract the quote ID from the URL parameters
+        const { content, author, source } = req.body; // Extract updated fields from the request body
+
+        // Validate required fields
+        if (!content || !author) {
+            return res.status(400).json({ error: 'Content and author are required.' });
+        }
+
+        // Prepare the update object
+        const updateData = { content, author };
+        if (source) {
+            updateData.source = source; // Add source only if it's provided
+        }
+
+        // Update the quote in the database
+        const updatedQuote = await Quote.findByIdAndUpdate(
+            id, // The quote ID
+            updateData, // The fields to update
+            { new: true } // Options: Return the updated document
+        );
+
+        if (!updatedQuote) {
+            return res.status(404).json({ error: 'Quote not found.' });
+        }
+
+        // Send the updated quote as the response
+        res.status(200).json(updatedQuote);
+    } catch (error) {
+        console.error('Error updating quote:', error);
+        res.status(500).json({ error: 'Internal server error.' });
     }
 });
 

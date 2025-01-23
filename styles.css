@@ -263,6 +263,15 @@ h1 {
     color: white; /* Change icon color to white */
 }
 
+.edit-field {
+    border: 1px solid grey;
+    border-radius: 4px;
+    padding: 5px;
+    margin: 5px 0;
+    width: 100%;
+}
+
+
 /* ------------------------------------------Notifications */
 #notification-container {
     position: fixed;

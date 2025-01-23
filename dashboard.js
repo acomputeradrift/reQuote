@@ -112,10 +112,11 @@ export async function loadQuotes() {
 //Render Each Quote Box
 function renderQuoteBox(quote) {
         console.log("renderQuoteBox ran in dashboard.js");
+        console.log("Rendering quote with ID:", quote._id);
         const amazonLinkHTML = generateAmazonLink(quote.author, quote.source);
         const quoteBox = document.createElement('div'); // Create a container for the quote
         quoteBox.className = 'quote-box'; // Add a class for styling
-        quoteBox.dataset.id = quote._id; // Store the quote ID for reference
+        quoteBox.id = `quote-${quote._id}`; // Assign a unique ID for reference
         
         // Add the quote content
         const content = document.createElement('p');
@@ -187,7 +188,7 @@ function renderQuoteBox(quote) {
         emailIcon.innerHTML = '&#9993;'; // Email icon
         emailIcon.title = 'Add or remove this quote from your email schedule'; // Hover message
 
-        // Toggle selection logic
+        //----Toggle selection logic
         if (selectedQuotes.includes(quote._id)) {
         emailIcon.classList.add('selected');
         }
@@ -213,7 +214,15 @@ function renderQuoteBox(quote) {
             await updateSelectedQuotesInBackend();
             event.stopPropagation();
         });
-    
+        
+                 // Create edit button
+        const editButton = document.createElement('button');
+        editButton.className = 'edit-button'; // Add a class for styling
+        editButton.innerHTML = '<span style="color: white; font-weight: bold;">&#9998;</span>'; // Pencil icon
+        editButton.title = 'Edit this quote'; // Hover message
+        editButton.addEventListener('click', () => {
+            enableEditMode(quote);
+        });
 
         // Append content, author, and delete button to the box
         quoteBox.appendChild(content);
@@ -221,6 +230,7 @@ function renderQuoteBox(quote) {
         quoteBox.appendChild(deleteButton);
         quoteBox.appendChild(reorderIcon);
         quoteBox.appendChild(emailIcon);
+        quoteBox.appendChild(editButton);
 
         // Allow dragging only when clicking the icon but move the whole box
         reorderIcon.setAttribute('draggable', true); 
@@ -309,6 +319,138 @@ async function saveOrder() {
     console.error('Error saving order (frontend):', error);
     alert('Failed to save order (frontend).');
     }
+}
+
+//updated edit mode
+
+function enableEditMode(quote) {
+    try {
+        const quoteBox = document.getElementById(`quote-${quote._id}`);
+        if (!quoteBox) {
+            console.error(`Quote box with ID quote-${quote._id} not found.`);
+            return;
+        }
+
+        // Render editable fields inside the quote box
+        quoteBox.innerHTML = `
+            <textarea id="edit-content-${quote._id}" class="edit-field">${quote.content}</textarea>
+            <input id="edit-author-${quote._id}" class="edit-field" value="${quote.author || ''}" />
+            <input id="edit-source-${quote._id}" class="edit-field" value="${quote.source || ''}" />
+            <button id="save-${quote._id}" class="save-button">Save</button>
+            <button id="cancel-${quote._id}" class="cancel-button">Cancel</button>
+        `;
+
+        // Add event listeners for save and cancel buttons
+        document.getElementById(`save-${quote._id}`).addEventListener('click', () => saveQuote(quote._id));
+        document.getElementById(`cancel-${quote._id}`).addEventListener('click', () => cancelEdit(quote._id));
+    } catch (error) {
+        console.error(`Error enabling edit mode for quote ID ${quote._id}:`, error);
+    }
+}
+
+
+// function enableEditMode(quote) {
+//     const quoteBox = document.getElementById(`quote-${quote._id}`);
+//     if (!quoteBox) {
+//         console.error(`Quote box with ID quote-${quote._id} not found.`);
+//         return;
+//     }
+
+//     const content = quoteBox.querySelector('.quote-content')?.textContent || '';
+//     const author = quoteBox.querySelector('.quote-author')?.textContent || '';
+//     const source = quoteBox.querySelector('.quote-source')?.textContent || '';
+
+//     quoteBox.innerHTML = `
+//         <textarea id="edit-content-${quote._id}" class="edit-field">${content}</textarea>
+//         <input id="edit-author-${quote._id}" class="edit-field" value="${author}" />
+//         <input id="edit-source-${quote._id}" class="edit-field" value="${source}" />
+//         <button id="save-${quote._id}" class="save-button">Save</button>
+//         <button id="cancel-${quote._id}" class="cancel-button">Cancel</button>
+//     `;
+
+//     // Add event listeners
+//     document.getElementById(`save-${quote._id}`).addEventListener('click', () => saveQuote(quote._id));
+//     document.getElementById(`cancel-${quote._id}`).addEventListener('click', () => cancelEdit(quote._id));
+// }
+
+
+//Quote edit mode
+// function enableEditMode(quote) {
+//     const quoteBox = document.getElementById(`quote-${quote._id}`);
+//     const content = quoteBox.querySelector('.quote-content').textContent;
+//     const author = quoteBox.querySelector('.quote-author').textContent;
+//     const source = quoteBox.querySelector('.quote-source').textContent;
+
+//     quoteBox.innerHTML = `
+//         <textarea id="edit-content-${quote._id}" class="edit-field">${content}</textarea>
+//         <input id="edit-author-${quote._id}" class="edit-field" value="${author}" />
+//         <input id="edit-source-${quote._id}" class="edit-field" value="${source}" />
+//         <button onclick="saveQuote('${quote._id}')">Save</button>
+//         <button onclick="cancelEdit('${quote._id}')">Cancel</button>
+//     `;
+// }
+
+// Updated save quote after editing
+
+async function saveQuote(quoteId) {
+    const content = document.getElementById(`edit-content-${quoteId}`).value.trim();
+    const author = document.getElementById(`edit-author-${quoteId}`).value.trim();
+    const source = document.getElementById(`edit-source-${quoteId}`).value.trim();
+
+    if (!content || !author) {
+        alert('Content and author are required.');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/quotes/${quoteId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content, author, source }),
+        });
+
+        if (response.ok) {
+            const updatedQuote = await response.json();
+
+            // Clear the quote box and re-render it
+            const quoteBox = document.getElementById(`quote-${quoteId}`);
+            if (quoteBox) {
+                quoteBox.innerHTML = ''; // Clear the current content
+                renderQuoteBox(updatedQuote); // Re-render with updated data
+            }
+            alert('Quote updated successfully!');
+        } else {
+            throw new Error('Failed to save quote.');
+        }
+    } catch (error) {
+        console.error(`Error saving quote with ID ${quoteId}:`, error);
+        alert('Failed to save quote.');
+    }
+}
+
+
+//Save quote after editing
+// async function saveQuote(quoteId) {
+//     const content = document.getElementById(`edit-content-${quoteId}`).value;
+//     const author = document.getElementById(`edit-author-${quoteId}`).value;
+//     const source = document.getElementById(`edit-source-${quoteId}`).value;
+
+//     const response = await fetch(`/quotes/${quoteId}`, {
+//         method: 'PUT',
+//         headers: { 'Content-Type': 'application/json' },
+//         body: JSON.stringify({ content, author, source })
+//     });
+
+//     if (response.ok) {
+//         alert('Quote updated successfully!');
+//         location.reload(); // Reload quotes
+//     } else {
+//         alert('Failed to update quote.');
+//     }
+// }
+
+function cancelEdit(quoteId) {
+    location.reload(); // Reload page to cancel edits
 }
 
 //Delete Quote
