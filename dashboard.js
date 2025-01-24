@@ -177,7 +177,7 @@ function renderQuoteBox(quote) {
         // Create a delete button
         const deleteButton = document.createElement('button');
         deleteButton.className = 'delete-button'; // Add a class for styling
-        deleteButton.innerHTML = '<span style="color: white; font-weight: bold;">&#10006;</span>';
+        deleteButton.innerHTML = '&#10006;';
         deleteButton.title = 'Delete this quote'; // Hover message
         deleteButton.addEventListener('click', async () => {
             if (confirm('Are you sure you want to delete this quote?')) {
@@ -186,28 +186,36 @@ function renderQuoteBox(quote) {
             }
         });
 
+        // Create the edit button (orange color, placed between delete and email icon)
+        const editButton = document.createElement('button');
+        editButton.className = 'edit-button';
+        editButton.innerHTML = '&#9998;';
+        //editButton.innerHTML = '<span style="color: black; font-weight: bold;">&#9998;</span>'; // Unicode pencil icon
+        editButton.title = 'Edit this quote'; // Hover message
+        editButton.addEventListener('click', () => enableEditMode(quote));
+
             // Create email icon
-        const emailIcon = document.createElement('div');
-        emailIcon.className = 'email-icon'; // Add a class for styling
-        emailIcon.innerHTML = '&#9993;'; // Email icon
-        emailIcon.title = 'Add or remove this quote from your email schedule'; // Hover message
+        const emailButton = document.createElement('div');
+        emailButton.className = 'email-button'; // Add a class for styling
+        emailButton.innerHTML = '&#9993;'; // Email icon
+        emailButton.title = 'Add or remove this quote from your email schedule'; // Hover message
 
         //----Toggle selection logic
         if (selectedQuotes.includes(quote._id)) {
-        emailIcon.classList.add('selected');
+        emailButton.classList.add('selected');
         }
 
-        emailIcon.addEventListener('click', async (event) => {
+        emailButton.addEventListener('click', async (event) => {
             const index = selectedQuotes.indexOf(quote._id);
     
             if (index > -1) {
                 // Unselect the quote
                 selectedQuotes.splice(index, 1);
-                emailIcon.classList.remove('selected');
+                emailButton.classList.remove('selected');
             } else if (selectedQuotes.length < 21) {
                 // Select the quote
                 selectedQuotes.push(quote._id);
-                emailIcon.classList.add('selected');
+                emailButton.classList.add('selected');
             } else {
                 alert('You can select up to 21 quotes only.');
             }
@@ -219,22 +227,19 @@ function renderQuoteBox(quote) {
             event.stopPropagation();
         });
         
-                 // Create edit button
-        const editButton = document.createElement('button');
-        editButton.className = 'edit-button'; // Add a class for styling
-        editButton.innerHTML = '<span style="color: white; font-weight: bold;">&#9998;</span>'; // Pencil icon
-        editButton.title = 'Edit this quote'; // Hover message
-        editButton.addEventListener('click', () => {
-            enableEditMode(quote);
-        });
+        const buttonContainer = document.createElement('div');
+        
+        buttonContainer.className = 'buttonContainer';
+
+        buttonContainer.appendChild(deleteButton);
+        buttonContainer.appendChild(editButton);
+        buttonContainer.appendChild(emailButton);
 
         // Append content, author, and delete button to the box
         quoteBox.appendChild(content);
         quoteBox.appendChild(authorAndSource);
-        quoteBox.appendChild(deleteButton);
         quoteBox.appendChild(reorderIcon);
-        quoteBox.appendChild(emailIcon);
-        quoteBox.appendChild(editButton);
+        quoteBox.appendChild(buttonContainer);
 
         // Allow dragging only when clicking the icon but move the whole box
         reorderIcon.setAttribute('draggable', true); 
@@ -334,8 +339,9 @@ function enableEditMode(quote) {
             console.error(`Quote box with ID quote-${quote._id} not found.`);
             return;
         }
+//updated editable fields
 
-        // Render editable fields inside the quote box
+        quoteBox.classList.add('edit-mode'); // Add the "edit-mode" class
         quoteBox.innerHTML = `
             <textarea id="edit-content-${quote._id}" class="edit-field">${quote.content}</textarea>
             <input id="edit-author-${quote._id}" class="edit-field" value="${quote.author || ''}" />
@@ -343,6 +349,16 @@ function enableEditMode(quote) {
             <button id="save-${quote._id}" class="save-button">Save</button>
             <button id="cancel-${quote._id}" class="cancel-button">Cancel</button>
         `;
+
+
+        // Render editable fields inside the quote box
+        // quoteBox.innerHTML = `
+        //     <textarea id="edit-content-${quote._id}" class="edit-field">${quote.content}</textarea>
+        //     <input id="edit-author-${quote._id}" class="edit-field" value="${quote.author || ''}" />
+        //     <input id="edit-source-${quote._id}" class="edit-field" value="${quote.source || ''}" />
+        //     <button id="save-${quote._id}" class="save-button">Save</button>
+        //     <button id="cancel-${quote._id}" class="cancel-button">Cancel</button>
+        // `;
 
         // Add event listeners for save and cancel buttons
         document.getElementById(`save-${quote._id}`).addEventListener('click', () => saveQuote(quote));
