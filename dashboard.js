@@ -111,16 +111,25 @@ export async function loadQuotes() {
 
 //Render Each Quote Box
 function renderQuoteBox(quote) {
+
+    const existingQuoteBox = document.getElementById(`quote-${quote._id}`);
+    if (existingQuoteBox) {
+        console.log("Updating existing quoteBox:", existingQuoteBox);
+    } else {
+        console.log("Creating a new quoteBox for quote ID:", quote._id);
+    }
+
     if (!quote || !quote.content || !quote.author) {
         console.error("Invalid or incomplete quote data:", quote);
         return; // Prevent rendering
     }
         console.log("renderQuoteBox ran in dashboard.js");
         console.log("Rendering quote with ID:", quote._id);
-        //const amazonLinkHTML = generateAmazonLink(quote.author, quote.source);
+
         const quoteBox = document.createElement('div'); // Create a container for the quote
         quoteBox.className = 'quote-box'; // Add a class for styling
         quoteBox.id = `quote-${quote._id}`; // Assign a unique ID for reference
+        console.log("QuoteBox being re-rendered:", quoteBox);
         
         // Add the quote content
         const content = document.createElement('p');
@@ -241,6 +250,8 @@ function renderQuoteBox(quote) {
         quoteBox.appendChild(reorderIcon);
         quoteBox.appendChild(buttonContainer);
 
+        console.log("Final re-rendered quoteBox content:", quoteBox.innerHTML);
+
         // Allow dragging only when clicking the icon but move the whole box
         reorderIcon.setAttribute('draggable', true); 
         reorderIcon.addEventListener('dragstart', handleDragStart);
@@ -250,8 +261,23 @@ function renderQuoteBox(quote) {
         quoteBox.addEventListener('dragover', handleDragOver);
         quoteBox.addEventListener('drop', handleDrop);
 
+        
+
         // Add the quote box to the quotes list
         quotesList.appendChild(quoteBox);
+
+        //   // --------------------------------------------Append to DOM or replace existing
+        //   if (existingQuoteBox) {
+        //     console.log("Replacing existing quoteBox for ID:", quote._id);
+        //     quotesList.replaceChild(quoteBox, existingQuoteBox);
+        // } else {
+        //     console.log("Appending new quoteBox for ID:", quote._id);
+        //     quotesList.appendChild(quoteBox);
+        // }
+
+
+        
+          
 }
 
 //Fetch Selected Quotes from Backend
@@ -339,26 +365,24 @@ function enableEditMode(quote) {
             console.error(`Quote box with ID quote-${quote._id} not found.`);
             return;
         }
-//updated editable fields
+        //updated editable fields
 
         quoteBox.classList.add('edit-mode'); // Add the "edit-mode" class
         quoteBox.innerHTML = `
+            <label for="edit-content-${quote._id}" class="edit-label">Quote</label>
             <textarea id="edit-content-${quote._id}" class="edit-field">${quote.content}</textarea>
+
+            <label for="edit-author-${quote._id}" class="edit-label">Author</label>
             <input id="edit-author-${quote._id}" class="edit-field" value="${quote.author || ''}" />
+
+            <label for="edit-source-${quote._id}" class="edit-label">Source</label>
             <input id="edit-source-${quote._id}" class="edit-field" value="${quote.source || ''}" />
-            <button id="save-${quote._id}" class="save-button">Save</button>
-            <button id="cancel-${quote._id}" class="cancel-button">Cancel</button>
+
+            <div class="button-container">
+                <button id="cancel-${quote._id}" class="cancel-button">Cancel</button>
+                <button id="save-${quote._id}" class="save-button">Save</button>
+            </div>
         `;
-
-
-        // Render editable fields inside the quote box
-        // quoteBox.innerHTML = `
-        //     <textarea id="edit-content-${quote._id}" class="edit-field">${quote.content}</textarea>
-        //     <input id="edit-author-${quote._id}" class="edit-field" value="${quote.author || ''}" />
-        //     <input id="edit-source-${quote._id}" class="edit-field" value="${quote.source || ''}" />
-        //     <button id="save-${quote._id}" class="save-button">Save</button>
-        //     <button id="cancel-${quote._id}" class="cancel-button">Cancel</button>
-        // `;
 
         // Add event listeners for save and cancel buttons
         document.getElementById(`save-${quote._id}`).addEventListener('click', () => saveQuote(quote));
@@ -394,30 +418,47 @@ async function saveQuote(quote) {
         });
 
         if (response.ok) {
-            const updatedQuote = await response.json();
             showNotification('Quote edited successfully', 'success');
-            // Replace the existing quote in the DOM
-
-            if (updatedQuote && updatedQuote.content && updatedQuote.author) {
-                const quoteBox = document.getElementById(`quote-${quote._id}`);
-                if (quoteBox) {
-                    quoteBox.innerHTML = ''; // Clear and re-render
-                    renderQuoteBox(updatedQuote);
-                }
-            } else {
-                console.error("Received incomplete updated quote:", updatedQuote);
-            }
-            
-
-
-            // const quoteBox = document.getElementById(`quote-${quote._id}`);
-            // if (quoteBox) {
-            //     quoteBox.innerHTML = ''; // Clear the current content
-            //     renderQuoteBox(updatedQuote); // Re-render in place with updated data
-            // }
+            loadQuotes(); // Reload the entire list after saving
         } else {
-            throw new Error('Failed to save quote.');
+            console.error("Failed to save updated quote, response status:", response.status);
         }
+
+        // if (response.ok) {
+        //     const updatedQuote = await response.json();
+        //     showNotification('Quote edited successfully', 'success');
+        //     console.log("Updated quote received from backend:", updatedQuote);
+        
+        //     // Replace the existing quote in the DOM
+        //     if (updatedQuote && updatedQuote.content && updatedQuote.author) {
+        //         const quoteBox = document.getElementById(`quote-${quote._id}`);
+        //         console.log("Existing quoteBox before rendering:", quoteBox);
+                
+        //         if (quoteBox) {
+        //             console.log("Before clearing quoteBox content:", quoteBox.innerHTML); // Log current content
+        //             quoteBox.innerHTML = ''; // Clear the content
+        //             console.log("After clearing quoteBox content:", quoteBox.innerHTML); // Log to ensure it's empty
+                
+        //             renderQuoteBox(updatedQuote); // Re-render the updated quote
+        //       //  }
+                
+
+        //         // if (quoteBox) {
+        //         //     console.log("Clearing and re-rendering the quoteBox.");
+        //         //     quoteBox.innerHTML = ''; // Clear and re-render
+        //         //     renderQuoteBox(updatedQuote);
+        //         //    //quoteBox.classList.remove('edit-mode'); // Remove edit-mode after rendering
+        //          } else {
+        //             console.error("QuoteBox not found for ID:", `quote-${quote._id}`);
+        //         }
+        //     } else {
+        //         console.error("Received incomplete updated quote:", updatedQuote);
+        //     }
+        
+        //     console.log("QuoteBox after rendering:", document.getElementById(`quote-${quote._id}`));
+        // } else {
+        //     console.error("Failed to save updated quote, response status:", response.status);
+        // }
     } catch (error) {
         console.error(`Error saving quote with ID ${quote._id}:`, error);
         alert('Failed to save quote.');

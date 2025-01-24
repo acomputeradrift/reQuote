@@ -133,7 +133,8 @@ h1 {
     text-align: left;
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
+    justify-content: center; /* Center content vertically, including the buttons */
+    overflow: hidden; /* Prevent overflow */
 }
 
 /* Style for the quote content - top left */
@@ -281,16 +282,25 @@ h1 {
     background-color: #fff; /* White background for input */
 }
 
-/* Style for save and cancel buttons */
-.save-button, .cancel-button {
-    padding: 10px 20px; /* Adjust button padding */
-    border: none; /* Remove default borders */
-    border-radius: 5px; /* Rounded corners */
+/* Style for the button container */
+.button-container {
+    display: flex; /* Use flexbox for alignment */
+    justify-content: center; /* Center the buttons horizontally */
+    margin-top: 15px; /* Add some space above the buttons */
+    position: absolute; /* Position relative to the quoteBox */
+    right: 10px; /* Align buttons to the right edge of the quoteBox */
+    gap: 10px; /* Add spacing between the buttons */
+}
+
+/* General button styling */
+.button-container button {
+    padding: 10px 20px; /* Adjust button size */
     font-size: 1rem; /* Button text size */
+    border: none; /* Remove default border */
+    border-radius: 5px; /* Rounded corners */
     cursor: pointer; /* Pointer cursor on hover */
-    margin-right: 10px; /* Space between buttons */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Add a subtle shadow */
-    transition: background-color 0.3s ease, transform 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Subtle shadow */
+    transition: background-color 0.3s ease, transform 0.2s ease; /* Add transitions */
 }
 
 /* Specific styles for the save button */
