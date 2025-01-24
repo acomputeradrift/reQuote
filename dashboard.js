@@ -111,9 +111,13 @@ export async function loadQuotes() {
 
 //Render Each Quote Box
 function renderQuoteBox(quote) {
+    if (!quote || !quote.content || !quote.author) {
+        console.error("Invalid or incomplete quote data:", quote);
+        return; // Prevent rendering
+    }
         console.log("renderQuoteBox ran in dashboard.js");
         console.log("Rendering quote with ID:", quote._id);
-        const amazonLinkHTML = generateAmazonLink(quote.author, quote.source);
+        //const amazonLinkHTML = generateAmazonLink(quote.author, quote.source);
         const quoteBox = document.createElement('div'); // Create a container for the quote
         quoteBox.className = 'quote-box'; // Add a class for styling
         quoteBox.id = `quote-${quote._id}`; // Assign a unique ID for reference
@@ -341,115 +345,70 @@ function enableEditMode(quote) {
         `;
 
         // Add event listeners for save and cancel buttons
-        document.getElementById(`save-${quote._id}`).addEventListener('click', () => saveQuote(quote._id));
-        document.getElementById(`cancel-${quote._id}`).addEventListener('click', () => cancelEdit(quote._id));
+        document.getElementById(`save-${quote._id}`).addEventListener('click', () => saveQuote(quote));
+        document.getElementById(`cancel-${quote._id}`).addEventListener('click', () => cancelEdit(quote));
     } catch (error) {
         console.error(`Error enabling edit mode for quote ID ${quote._id}:`, error);
     }
 }
 
+//v14 save quote afer editing
 
-// function enableEditMode(quote) {
-//     const quoteBox = document.getElementById(`quote-${quote._id}`);
-//     if (!quoteBox) {
-//         console.error(`Quote box with ID quote-${quote._id} not found.`);
-//         return;
-//     }
-
-//     const content = quoteBox.querySelector('.quote-content')?.textContent || '';
-//     const author = quoteBox.querySelector('.quote-author')?.textContent || '';
-//     const source = quoteBox.querySelector('.quote-source')?.textContent || '';
-
-//     quoteBox.innerHTML = `
-//         <textarea id="edit-content-${quote._id}" class="edit-field">${content}</textarea>
-//         <input id="edit-author-${quote._id}" class="edit-field" value="${author}" />
-//         <input id="edit-source-${quote._id}" class="edit-field" value="${source}" />
-//         <button id="save-${quote._id}" class="save-button">Save</button>
-//         <button id="cancel-${quote._id}" class="cancel-button">Cancel</button>
-//     `;
-
-//     // Add event listeners
-//     document.getElementById(`save-${quote._id}`).addEventListener('click', () => saveQuote(quote._id));
-//     document.getElementById(`cancel-${quote._id}`).addEventListener('click', () => cancelEdit(quote._id));
-// }
-
-
-//Quote edit mode
-// function enableEditMode(quote) {
-//     const quoteBox = document.getElementById(`quote-${quote._id}`);
-//     const content = quoteBox.querySelector('.quote-content').textContent;
-//     const author = quoteBox.querySelector('.quote-author').textContent;
-//     const source = quoteBox.querySelector('.quote-source').textContent;
-
-//     quoteBox.innerHTML = `
-//         <textarea id="edit-content-${quote._id}" class="edit-field">${content}</textarea>
-//         <input id="edit-author-${quote._id}" class="edit-field" value="${author}" />
-//         <input id="edit-source-${quote._id}" class="edit-field" value="${source}" />
-//         <button onclick="saveQuote('${quote._id}')">Save</button>
-//         <button onclick="cancelEdit('${quote._id}')">Cancel</button>
-//     `;
-// }
-
-// Updated save quote after editing
-
-async function saveQuote(quoteId) {
-    const content = document.getElementById(`edit-content-${quoteId}`).value.trim();
-    const author = document.getElementById(`edit-author-${quoteId}`).value.trim();
-    const source = document.getElementById(`edit-source-${quoteId}`).value.trim();
+async function saveQuote(quote) {
+    const content = document.getElementById(`edit-content-${quote._id}`).value.trim();
+    const author = document.getElementById(`edit-author-${quote._id}`).value.trim();
+    const source = document.getElementById(`edit-source-${quote._id}`).value.trim();
 
     if (!content || !author) {
         alert('Content and author are required.');
         return;
     }
-
+    // Include the order field in the update
+    const updateData = {
+        content,
+        author,
+        source,
+        order: quote.order, // Retain the order field
+    };
     try {
-        const response = await fetch(`/quotes/${quoteId}`, {
+        const response = await fetch(`/quotes/${quote._id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content, author, source }),
+            body: JSON.stringify(updateData),
         });
 
         if (response.ok) {
             const updatedQuote = await response.json();
+            showNotification('Quote edited successfully', 'success');
+            // Replace the existing quote in the DOM
 
-            // Clear the quote box and re-render it
-            const quoteBox = document.getElementById(`quote-${quoteId}`);
-            if (quoteBox) {
-                quoteBox.innerHTML = ''; // Clear the current content
-                renderQuoteBox(updatedQuote); // Re-render with updated data
+            if (updatedQuote && updatedQuote.content && updatedQuote.author) {
+                const quoteBox = document.getElementById(`quote-${quote._id}`);
+                if (quoteBox) {
+                    quoteBox.innerHTML = ''; // Clear and re-render
+                    renderQuoteBox(updatedQuote);
+                }
+            } else {
+                console.error("Received incomplete updated quote:", updatedQuote);
             }
-            alert('Quote updated successfully!');
+            
+
+
+            // const quoteBox = document.getElementById(`quote-${quote._id}`);
+            // if (quoteBox) {
+            //     quoteBox.innerHTML = ''; // Clear the current content
+            //     renderQuoteBox(updatedQuote); // Re-render in place with updated data
+            // }
         } else {
             throw new Error('Failed to save quote.');
         }
     } catch (error) {
-        console.error(`Error saving quote with ID ${quoteId}:`, error);
+        console.error(`Error saving quote with ID ${quote._id}:`, error);
         alert('Failed to save quote.');
     }
 }
 
-
-//Save quote after editing
-// async function saveQuote(quoteId) {
-//     const content = document.getElementById(`edit-content-${quoteId}`).value;
-//     const author = document.getElementById(`edit-author-${quoteId}`).value;
-//     const source = document.getElementById(`edit-source-${quoteId}`).value;
-
-//     const response = await fetch(`/quotes/${quoteId}`, {
-//         method: 'PUT',
-//         headers: { 'Content-Type': 'application/json' },
-//         body: JSON.stringify({ content, author, source })
-//     });
-
-//     if (response.ok) {
-//         alert('Quote updated successfully!');
-//         location.reload(); // Reload quotes
-//     } else {
-//         alert('Failed to update quote.');
-//     }
-// }
-
-function cancelEdit(quoteId) {
+function cancelEdit(quote) {
     location.reload(); // Reload page to cancel edits
 }
 
@@ -525,22 +484,5 @@ async function handleDrop(event) {
     draggedItem.style.opacity = '1'; // Reset the dragged item's opacity
     draggedItem = null;
 }
-
-//updated 
-// function generateAmazonLink(author, source) {
-//     if (!author || !source) {
-//         console.warn('Author or source missing for Amazon link generation.');
-//         return ''; // Return empty if either is missing
-//     }
-
-//     // Encode the search terms for the URL
-//     const query = encodeURIComponent(`${author} ${source}`);
-//     const amazonURL = `https://www.amazon.com/s?k=${query}&tag=YOUR_AFFILIATE_TAG`;
-
-//     // Return a properly formatted and clickable link as HTML
-
-//     return `<a href="${amazonURL}" target="_blank" rel="noopener noreferrer" style="color: #2196F3; text-decoration: none;">${source}</a>`;
-
-// }
 
 

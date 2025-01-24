@@ -1,4 +1,5 @@
 export function generateAmazonLink(author, source) {
+    console.log('amazonLink function run');
     if (!author || !source) {
         console.warn('Author or source missing for Amazon link generation.');
         return null; // Return null if either is missing
@@ -6,7 +7,7 @@ export function generateAmazonLink(author, source) {
 
     const query = encodeURIComponent(`${author} ${source}`);
     const amazonURL = `https://www.amazon.com/s?k=${query}&tag=YOUR_AFFILIATE_TAG`;
-
+    console.log('Amazon link generated');
     return amazonURL;
 }
 

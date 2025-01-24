@@ -239,8 +239,10 @@ app.post('/quotes/reorder', authenticate, async (req, res) => {
     }
 });
 
-//Edit Quote
+//Edit quote (logged...)
+
 app.put('/quotes/:id', async (req, res) => {
+    console.log('Attempt to edit quote hit the backend');
     try {
         const { id } = req.params; // Extract the quote ID from the URL parameters
         const { content, author, source } = req.body; // Extract updated fields from the request body
@@ -250,24 +252,35 @@ app.put('/quotes/:id', async (req, res) => {
             return res.status(400).json({ error: 'Content and author are required.' });
         }
 
-        // Prepare the update object
-        const updateData = { content, author };
+        // Generate the sourceLink every time based on the new source (or handle cases where there is no source)
+        let sourceLink = null;
         if (source) {
-            updateData.source = source; // Add source only if it's provided
+            sourceLink = generateAmazonLink(author, source);
+        } else {
+            console.log('No source provided, skipping sourceLink generation.');
         }
+
+        // Prepare the update object
+        const updateData = {
+            content,
+            author,
+            source: source || null, // Explicitly handle the case where source is not provided
+            sourceLink, // Include the newly generated sourceLink or null
+        };
 
         // Update the quote in the database
         const updatedQuote = await Quote.findByIdAndUpdate(
             id, // The quote ID
             updateData, // The fields to update
             { new: true } // Options: Return the updated document
-        );
+        ).populate('user'); // Populate the user field
 
         if (!updatedQuote) {
             return res.status(404).json({ error: 'Quote not found.' });
         }
-
-        // Send the updated quote as the response
+        console.log(`${updatedQuote.user.email} edited and saved quote ${updatedQuote._id} successfully`);
+        console.log("Updated quote:", updatedQuote); // Log the updated quote
+        // Send the updated quote as the response 
         res.status(200).json(updatedQuote);
     } catch (error) {
         console.error('Error updating quote:', error);
@@ -275,7 +288,7 @@ app.put('/quotes/:id', async (req, res) => {
     }
 });
 
-//Delete Quote By User (logging...)
+//Delete Quote By User (logged...)
 app.delete('/quotes/:id', authenticate, async (req, res) => {
     const quoteId = req.params.id;
     try {
