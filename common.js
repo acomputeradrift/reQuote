@@ -3,6 +3,7 @@
 let token = localStorage.getItem('token') || null; 
 export let selectedQuotes = [];
 
+
 export function setToken(newToken) {
     if (newToken) {
         const decodedToken = decodeToken(newToken); // Use your decodeToken function

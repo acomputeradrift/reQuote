@@ -1,4 +1,4 @@
-import { getToken, showNotification, checkTokenExpiration, logout, selectedQuotes } from './common.js';
+import { getToken, showNotification, checkTokenExpiration, logout } from './common.js';
 import { generateAmazonLink } from './utils/amazonLink.js';
 
 // Ensure token is declared properly
@@ -10,8 +10,9 @@ const addQuotesSection = document.getElementById('add-quotes-section');
 const loginForm = document.getElementById('login-form');
 const addQuoteForm = document.getElementById('add-quote-form');
 const quotesList = document.getElementById('quotes-list');
-const generateTestQuotesButton = document.getElementById('generate-test-quotes');
 
+
+let allQuotes = [];
 let draggedItem = null;
 
 //----------------------------------Event Listeners
@@ -31,7 +32,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Fetch selected quotes and load quotes
     try {
-        await fetchSelectedQuotes();
+        //await fetchSelectedQuotes();
         await loadQuotes();
     } catch (error) {
         console.error("Error during dashboard initialization:", error);
@@ -80,8 +81,10 @@ if (addQuoteForm) {
 }
 
 // ✅ Safe Loading Quotes Function
+
+// Updated loadQuotes function
 export async function loadQuotes() {
-    console.log("loadQuotes queried the backend from dashboard.js)");
+    console.log("loadQuotes queried the backend from dashboard.js");
     try {
         const response = await fetch('/quotes', {
             method: 'GET',
@@ -93,11 +96,30 @@ export async function loadQuotes() {
         if (response.ok) {
             console.log("loadQuotes got an OK response from backend");
             const quotes = await response.json();
-            quotes.sort((a, b) => a.order - b.order); 
+
+            // Store quotes globally
+            allQuotes = quotes;
+
+            // Separate selected and non-selected quotes
+            const selectedQuotes = quotes.filter(quote => quote.selected);
+            const nonSelectedQuotes = quotes.filter(quote => !quote.selected);
+
+            // Sort each group by position
+            selectedQuotes.sort((a, b) => a.position - b.position);
+            nonSelectedQuotes.sort((a, b) => a.position - b.position);
+
+            // Clear and render quotes
             quotesList.innerHTML = '';
-            quotes.forEach((quote) => {
-                            renderQuoteBox(quote);
-                        });
+
+            // Render selected quotes first
+            selectedQuotes.forEach((quote) => {
+                renderQuoteBox(quote);
+            });
+
+            // Render non-selected quotes below
+            nonSelectedQuotes.forEach((quote) => {
+                renderQuoteBox(quote);
+            });
         } else {
             console.log("loadQuotes DID NOT get an OK response from backend");
             console.error('Failed to load quotes');
@@ -108,15 +130,37 @@ export async function loadQuotes() {
     }
 }
 
+
+// export async function loadQuotes() {
+//     console.log("loadQuotes queried the backend from dashboard.js)");
+//     try {
+//         const response = await fetch('/quotes', {
+//             method: 'GET',
+//             headers: {
+//                 'Authorization': `Bearer ${token}`,
+//             },
+//         });
+
+//         if (response.ok) {
+//             console.log("loadQuotes got an OK response from backend");
+//             const quotes = await response.json();
+//             quotes.sort((a, b) => a.order - b.order); 
+//             quotesList.innerHTML = '';
+//             quotes.forEach((quote) => {
+//                             renderQuoteBox(quote);
+//                         });
+//         } else {
+//             console.log("loadQuotes DID NOT get an OK response from backend");
+//             console.error('Failed to load quotes');
+//         }
+//     } catch (error) {
+//         console.log("loadQuotes failed completely");
+//         console.error('Error loading quotes:', error);
+//     }
+// }
+
 //Render Each Quote Box
 function renderQuoteBox(quote) {
-
-    // const existingQuoteBox = document.getElementById(`quote-${quote._id}`);
-    // if (existingQuoteBox) {
-    //     console.log("Updating existing quoteBox:", existingQuoteBox);
-    // } else {
-    //     console.log("Creating a new quoteBox for quote ID:", quote._id);
-    // }
 
     if (!quote || !quote.content || !quote.author) {
         console.error("Invalid or incomplete quote data:", quote);
@@ -212,28 +256,171 @@ function renderQuoteBox(quote) {
         emailButton.innerHTML = '&#9993;';
         emailButton.title = 'Add or remove this quote from your email schedule';
     
-        if (selectedQuotes.includes(quote._id)) {
+        // if (selectedQuotes.includes(quote._id)) {
+        //     emailButton.classList.add('selected');
+        // }
+
+          // Apply the `selected` class based on the quote's state
+          if (quote.selected) {
             emailButton.classList.add('selected');
+        } else {
+            emailButton.classList.remove('selected');
         }
-    
+        
+
         emailButton.addEventListener('click', async (event) => {
-            const index = selectedQuotes.indexOf(quote._id);
-    
-            if (index > -1) {
-                selectedQuotes.splice(index, 1);
+            const isCurrentlySelected = quote.selected;
+        
+            if (isCurrentlySelected) {
+                // Deselect the quote
+                quote.selected = false;
                 emailButton.classList.remove('selected');
-            } else if (selectedQuotes.length < 21) {
-                selectedQuotes.push(quote._id);
+                console.log('Class removed:', emailButton.classList); // Check current classes
+                  // Log `allQuotes` to verify its state
+                console.log('allQuotes before calculating position:', allQuotes);
+        
+                // Assign the highest position in the non-selected group
+                const nonSelectedQuotes = allQuotes.filter(q => !q.selected);
+                console.log('nonSelectedQuotes:', nonSelectedQuotes);
+                quote.position = nonSelectedQuotes.length > 0
+                    ? Math.max(...nonSelectedQuotes.map(q => q.position)) + 1
+                    : 0;
+                console.log('New position for deselected quote:', quote.position);
+              
+            } else if (isCurrentlySelected.length < 21) {
+                
+                // Select the quote
+                quote.selected = true;
                 emailButton.classList.add('selected');
+                console.log('Class added:', emailButton.classList); // Check current classes
+        
+                // Assign the highest position in the selected group
+                const selectedQuotes = allQuotes.filter(q => q.selected);
+                quote.position = selectedQuotes.length > 0
+                    ? Math.max(...selectedQuotes.map(q => q.position)) + 1
+                    : 0;
             } else {
                 alert('You can select up to 21 quotes only.');
             }
-    
-            //console.log("Updated selectedQuotes:", selectedQuotes);
-    
-            await updateSelectedQuotesInBackend();
+            
+            console.log('Frontend sent:', {
+                id: quote._id,
+                selected: quote.selected,
+                position: quote.position
+            });
+        
+            // Save the updated selection and position to the backend
+            await updateQuoteSelectionInBackend(quote._id, quote.selected, quote.position);
+        
+            // Refresh the quotes list to reflect changes
+            await loadQuotes();
+        
             event.stopPropagation();
         });
+        
+        // emailButton.addEventListener('click', async (event) => {
+        //     const isCurrentlySelected = quote.selected;
+        
+        //     if (isCurrentlySelected) {
+        //         // Deselect the quote
+        //         quote.selected = false;
+        
+        //         // Assign the highest position in the non-selected group
+        //         const nonSelectedQuotes = allQuotes.filter(q => !q.selected);
+        //         quote.position = nonSelectedQuotes.length > 0
+        //             ? Math.max(...nonSelectedQuotes.map(q => q.position)) + 1
+        //             : 0;
+        
+        //         emailButton.classList.remove('selected');
+        //     } else if (selectedQuotes.length < 21) {
+        //         // Select the quote
+        //         quote.selected = true;
+        //         emailButton.classList.add('selected');
+        //     } else {
+        //         alert('You can select up to 21 quotes only.');
+        //     }
+            
+        //     console.log('Frontend sent:', {
+        //         id: quote._id,
+        //         selected: quote.selected,
+        //         position: quote.position
+        //     });
+            
+        //     // Save the updated selection and position to the backend
+        //     await updateQuoteSelectionInBackend(quote._id, quote.selected, quote.position);
+        
+        //     // Refresh the quotes list to reflect changes
+        //     await loadQuotes();
+        
+        //     event.stopPropagation();
+        // });
+        
+
+        // emailButton.addEventListener('click', async (event) => {
+        //     const isCurrentlySelected = quote.selected;
+        
+        //     if (isCurrentlySelected) {
+        //         // Deselect the quote
+        //         quote.selected = false;
+        
+        //         // Assign it the highest position in the non-selected group
+        //         const nonSelectedQuotes = allQuotes.filter(q => !q.selected);
+        //         quote.position = nonSelectedQuotes.length > 0
+        //             ? Math.max(...nonSelectedQuotes.map(q => q.position)) + 1
+        //             : 0;
+        
+        //         emailButton.classList.remove('selected');
+        //     } else if (selectedQuotes.length < 21) {
+        //         // Select the quote
+        //         quote.selected = true;
+        //         emailButton.classList.add('selected');
+        //     } else {
+        //         alert('You can select up to 21 quotes only.');
+        //     }
+        
+        //     // Save the updated selection and position to the backend
+        //     await saveOrderAndSelection();
+        
+        //     // Refresh the quotes list to reflect changes
+        //     await loadQuotes();
+        
+        //     event.stopPropagation();
+        // });
+        
+    
+        // emailButton.addEventListener('click', async (event) => {
+        //     if (quote.selected) {
+        //         quote.selected = false;
+        //         emailButton.classList.remove('selected');
+        //     } else if (selectedQuotes.length < 21) {
+        //         quote.selected = true;
+        //         emailButton.classList.add('selected');
+        //     } else {
+        //         alert('You can select up to 21 quotes only.');
+        //     }
+        
+        //     await updateQuoteSelectionInBackend(quote._id, quote.selected);
+        //     event.stopPropagation();
+        // });
+        
+        // emailButton.addEventListener('click', async (event) => {
+        //     const index = selectedQuotes.indexOf(quote._id);
+    
+        //     if (index > -1) {
+        //         selectedQuotes.splice(index, 1);
+        //         emailButton.classList.remove('selected');
+        //     } else if (selectedQuotes.length < 21) {
+        //         selectedQuotes.push(quote._id);
+        //         emailButton.classList.add('selected');
+        //     } else {
+        //         alert('You can select up to 21 quotes only.');
+        //     }
+    
+        //     //console.log("Updated selectedQuotes:", selectedQuotes);
+    
+        //     await updateSelectedQuotesInBackend();
+        //     event.stopPropagation();
+        // });
     
         rightButtonContainer.appendChild(deleteButton);
         rightButtonContainer.appendChild(editButton);
@@ -260,80 +447,182 @@ function renderQuoteBox(quote) {
 }
 
 //Fetch Selected Quotes from Backend
-export async function fetchSelectedQuotes() {
-    try {
-    const response = await fetch('/quotes/selected', {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-        },
-    });
+// export async function fetchSelectedQuotes() {
+//     try {
+//     const response = await fetch('/quotes/selected', {
+//         method: 'GET',
+//         headers: {
+//             'Authorization': `Bearer ${token}`,
+//         },
+//     });
 
-    if (response.ok) {
-        const data = await response.json();
-        selectedQuotes.length = 0;  // Clear the existing array
-        selectedQuotes.push(...data.selectedQuotes);  // Push new values
-        // selectedQuotes = data.selectedQuotes || []; // Set selectedQuotes globally
-    } else {
-        console.error('Failed to fetch selected quotes.');
-    }
+//     if (response.ok) {
+//         const data = await response.json();
+//         selectedQuotes.length = 0;  // Clear the existing array
+//         selectedQuotes.push(...data.selectedQuotes);  // Push new values
+//         // selectedQuotes = data.selectedQuotes || []; // Set selectedQuotes globally
+//     } else {
+//         console.error('Failed to fetch selected quotes.');
+//     }
+//     } catch (error) {
+//     console.error('Error fetching selected quotes:', error);
+//     }
+// }
+
+// Update the selection status of a single quote in the backend
+// async function updateQuoteSelectionInBackend(quoteId, isSelected) {
+//     try {
+//         const response = await fetch(`/quotes/${quoteId}/selection`, {
+//             method: 'PATCH',
+//             headers: {
+//                 'Authorization': `Bearer ${token}`,
+//                 'Content-Type': 'application/json',
+//             },
+//             body: JSON.stringify({ selected: isSelected }),
+//         });
+
+//         if (response.ok) {
+//             showNotification('Quote selection updated', 'success');
+//         } else {
+//             const data = await response.json();
+//             console.error('Failed to update quote selection:', data.message);
+//         }
+//     } catch (error) {
+//         console.error('Error updating quote selection:', error);
+//     }
+// }
+
+async function updateQuoteSelectionInBackend(quoteId, isSelected, position) {
+    try {
+        const response = await fetch(`/quotes/${quoteId}/selection`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ selected: isSelected, position }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Failed to update quote selection:', errorData.message);
+        }
     } catch (error) {
-    console.error('Error fetching selected quotes:', error);
+        console.error('Error updating quote selection:', error);
     }
 }
 
-//Send Selected Quotes to Backend
-async function updateSelectedQuotesInBackend() {
-    try {
-    const response = await fetch('/quotes/selected', {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ selectedQuotes }),
-    });
-    if (response.ok) {
-        showNotification('Email list updated', 'success');
-    } else {
-        const data = await response.json();
-        console.error('Failed to update selected quotes:', data.message);
-    }
-    } catch (error) {
-    console.error('Error updating selected quotes:', error);
-    }
-}
+
+
+// //Send Selected Quotes to Backend
+// async function updateSelectedQuotesInBackend() {
+//     try {
+//     const response = await fetch('/quotes/selected', {
+//         method: 'POST',
+//         headers: {
+//             'Authorization': `Bearer ${token}`,
+//             'Content-Type': 'application/json',
+//         },
+//         body: JSON.stringify({ selectedQuotes }),
+//     });
+//     if (response.ok) {
+//         showNotification('Email list updated', 'success');
+//     } else {
+//         const data = await response.json();
+//         console.error('Failed to update selected quotes:', data.message);
+//     }
+//     } catch (error) {
+//     console.error('Error updating selected quotes:', error);
+//     }
+// }
 
 //Save Quote Order
-async function saveOrder() {
+
+// Save the new order and selection status to the backend
+// async function saveOrderAndSelection() {
+//     try {
+//         // Prepare the data to send to the backend
+//         const updatedQuotes = allQuotes.map(quote => ({
+//             _id: quote._id,
+//             selected: quote.selected,
+//             position: quote.position
+//         }));
+
+//         const response = await fetch('/quotes/update-order-selection', {
+//             method: 'POST',
+//             headers: {
+//                 'Authorization': `Bearer ${token}`,
+//                 'Content-Type': 'application/json',
+//             },
+//             body: JSON.stringify({ quotes: updatedQuotes }),
+//         });
+
+//         if (response.ok) {
+//             console.log('Order and selection status updated successfully.');
+//         } else {
+//             const errorData = await response.json();
+//             console.error('Failed to update order and selection:', errorData.message);
+//         }
+//     } catch (error) {
+//         console.error('Error saving order and selection:', error);
+//     }
+// }
+
+async function saveOrderAndSelection() {
     try {
-        const newOrder = Array.from(quotesList.children).map((li, index) => ({
-            id: li.dataset.id, // Quote ID from the DOM
-            order: index, // New order based on position
+        const updatedQuotes = allQuotes.map(quote => ({
+            _id: quote._id,
+            selected: quote.selected,
+            position: quote.position,
         }));
 
-        //console.log('Saving order to backend:', newOrder); // Debug log
-
-        const response = await fetch('/quotes/reorder', {
+        const response = await fetch('/quotes/update-order-selection', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(newOrder), // Send the updated order
+            body: JSON.stringify({ quotes: updatedQuotes }),
         });
 
         if (!response.ok) {
-            const data = await response.json();
-            alert(`Failed to save order: ${data.message}`);
-        } else {
-            console.log('Order saved successfully');
+            const errorData = await response.json();
+            console.error('Failed to update order and selection:', errorData.message);
         }
     } catch (error) {
-    console.error('Error saving order (frontend):', error);
-    alert('Failed to save order (frontend).');
+        console.error('Error saving order and selection:', error);
     }
 }
+
+// async function saveOrder() {
+//     try {
+//         const newOrder = Array.from(quotesList.children).map((li, index) => ({
+//             id: li.dataset.id, // Quote ID from the DOM
+//             order: index, // New order based on position
+//         }));
+
+//         //console.log('Saving order to backend:', newOrder); // Debug log
+
+//         const response = await fetch('/quotes/reorder', {
+//             method: 'POST',
+//             headers: {
+//                 'Authorization': `Bearer ${token}`,
+//                 'Content-Type': 'application/json',
+//             },
+//             body: JSON.stringify(newOrder), // Send the updated order
+//         });
+
+//         if (!response.ok) {
+//             const data = await response.json();
+//             alert(`Failed to save order: ${data.message}`);
+//         } else {
+//             console.log('Order saved successfully');
+//         }
+//     } catch (error) {
+//     console.error('Error saving order (frontend):', error);
+//     alert('Failed to save order (frontend).');
+//     }
+// }
 
 //updated edit mode
 
@@ -469,24 +758,90 @@ function handleDragEnd() {
     }
 }
 
+// Updated handleDrop event
 async function handleDrop(event) {
     event.preventDefault();
+
     const targetItem = event.target.closest('.quote-box'); // Get the drop target
+
     if (draggedItem && targetItem && draggedItem !== targetItem) {
-    // Reorder visually
-    quotesList.insertBefore(draggedItem, targetItem.nextSibling);
+        const draggedQuoteId = draggedItem.id.replace('quote-', '');
+        const targetQuoteId = targetItem.id.replace('quote-', '');
 
-    // Save the new order to the database
-    await saveOrder();
+        // Determine the dragged and target quote objects
+        const draggedQuote = allQuotes.find(quote => quote._id === draggedQuoteId);
+        const targetQuote = allQuotes.find(quote => quote._id === targetQuoteId);
 
-    // Refresh the selectedQuotes array based on the new order
-    // updateSelectedQuotes();
+        if (!draggedQuote || !targetQuote) {
+            console.error("Dragged or target quote not found.");
+            return;
+        }
 
-    // Reload the quotes to reflect changes and keep selections intact
-    await loadQuotes();
+        // Determine if the dragged quote is moving to the selected or non-selected group
+        const isDraggedToSelected = targetQuote.selected;
+
+        // Handle group transitions (non-selected -> selected or vice versa)
+        if (draggedQuote.selected !== isDraggedToSelected) {
+            if (isDraggedToSelected) {
+                // Moving to the selected group
+                const selectedQuotesCount = allQuotes.filter(quote => quote.selected).length;
+                if (selectedQuotesCount >= 21) {
+                    alert("You can only select up to 21 quotes.");
+                    return;
+                }
+                draggedQuote.selected = true;
+            } else {
+                // Moving to the non-selected group
+                draggedQuote.selected = false;
+            }
+        }
+
+        // Reorder quotes within the group based on the drop target
+        const targetIndex = allQuotes.findIndex(quote => quote._id === targetQuoteId);
+        const draggedIndex = allQuotes.findIndex(quote => quote._id === draggedQuoteId);
+
+        // Remove dragged item from its current position
+        allQuotes.splice(draggedIndex, 1);
+
+        // Insert dragged item into the new position
+        allQuotes.splice(targetIndex, 0, draggedQuote);
+
+        // Update positions for all quotes in both groups
+        allQuotes.forEach((quote, index) => {
+            quote.position = index;
+        });
+
+        // Save the new order and selection status to the backend
+        await saveOrderAndSelection();
+
+        // Reload the quotes to reflect changes and keep selections intact
+        await loadQuotes();
     }
-    draggedItem.style.opacity = '1'; // Reset the dragged item's opacity
+
+    // Reset dragged item's opacity and clear reference
+    draggedItem.style.opacity = '1';
     draggedItem = null;
 }
+
+
+// async function handleDrop(event) {
+//     event.preventDefault();
+//     const targetItem = event.target.closest('.quote-box'); // Get the drop target
+//     if (draggedItem && targetItem && draggedItem !== targetItem) {
+//     // Reorder visually
+//     quotesList.insertBefore(draggedItem, targetItem.nextSibling);
+
+//     // Save the new order to the database
+//     await saveOrder();
+
+//     // Refresh the selectedQuotes array based on the new order
+//     // updateSelectedQuotes();
+
+//     // Reload the quotes to reflect changes and keep selections intact
+//     await loadQuotes();
+//     }
+//     draggedItem.style.opacity = '1'; // Reset the dragged item's opacity
+//     draggedItem = null;
+// }
 
 

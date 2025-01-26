@@ -49,12 +49,22 @@ const userSchema = new mongoose.Schema({
     selectedQuotes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Quote' }] // Array of selected quotes
 });
 
+// const quoteSchema = new mongoose.Schema({
+//     content: { type: String, required: true },
+//     author: { type: String, required: true },
+//     source: { type: String, default: 'Unknown' }, // Default value for source
+//     sourceLink: { type: String, default: null },  // Amazon link for the book
+//     order: Number, // Add the order attribute
+//     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+// });
+
 const quoteSchema = new mongoose.Schema({
     content: { type: String, required: true },
     author: { type: String, required: true },
     source: { type: String, default: 'Unknown' }, // Default value for source
     sourceLink: { type: String, default: null },  // Amazon link for the book
-    order: Number, // Add the order attribute
+    position: { type: Number, default: null },    // Renamed from 'order'
+    selected: { type: Boolean, default: false },  // Indicates if the quote is part of the selected group
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 });
 
@@ -67,7 +77,8 @@ const scheduleSchema = new mongoose.Schema({
 const User = mongoose.model('User', userSchema);
 const Quote = mongoose.model('Quote', quoteSchema);
 const Schedule = mongoose.model('Schedule', scheduleSchema);
-//module.exports = { Quote };
+export { Quote };
+
 //------------------------------------------------------ Initialize the Express app
 const app = express();
 app.use(express.json());
@@ -171,7 +182,49 @@ app.post('/logout', (req, res) => {
     });
 });
 
-// Add Quote (logged...)
+// // Add Quote (logged...)
+// app.post('/quotes', authenticate, async (req, res) => {
+//     const { content, author, source } = req.body;
+
+//     if (!content || !author) {
+//         return res.status(400).json({ message: 'Content and author are required' });
+//     }
+
+//     try {
+//         // Generate the Amazon link (if source is provided)
+//         const sourceLink = source ? generateAmazonLink(author, source) : null;
+//         // Calculate the next available order for the user's quotes
+//         const userQuotes = await Quote.find({ user: req.userId });
+//         const nextOrder = userQuotes.length; // Assign the next position in the list
+
+//         // Create a new quote
+//         const quote = new Quote({
+//             content,
+//             author,
+//             source,
+//             sourceLink, // Save the generated Amazon link
+//             order: nextOrder, // Assign order
+//             user: req.userId, // Associate the quote with the logged-in user
+//         });
+
+//         await quote.save();
+//         console.log('Quote object saved');
+//         // Add the quote to the user's quotes field
+//         const user = await User.findById(req.userId);
+//         if (user) {
+//             user.quotes.push(quote._id);
+//             await user.save();
+//             console.log('Quote object added to user');
+//         }
+//         res.status(201).json({ message: 'Quote added successfully', quote });
+//     } catch (error) {
+//         console.error('Error adding quote (backend):', error);
+//         res.status(500).json({ message: 'Failed to add quote (backend)' });
+//     }
+// });
+
+// Updated Add Quote Endpoint
+
 app.post('/quotes', authenticate, async (req, res) => {
     const { content, author, source } = req.body;
 
@@ -182,9 +235,12 @@ app.post('/quotes', authenticate, async (req, res) => {
     try {
         // Generate the Amazon link (if source is provided)
         const sourceLink = source ? generateAmazonLink(author, source) : null;
-        // Calculate the next available order for the user's quotes
+
+        // Fetch the user's existing quotes
         const userQuotes = await Quote.find({ user: req.userId });
-        const nextOrder = userQuotes.length; // Assign the next position in the list
+
+        // Calculate the next available position for the user's non-selected quotes
+        const nextPosition = userQuotes.filter(q => !q.selected).length;
 
         // Create a new quote
         const quote = new Quote({
@@ -192,12 +248,14 @@ app.post('/quotes', authenticate, async (req, res) => {
             author,
             source,
             sourceLink, // Save the generated Amazon link
-            order: nextOrder, // Assign order
+            position: nextPosition, // Assign position in non-selected group
+            selected: false, // Default to non-selected
             user: req.userId, // Associate the quote with the logged-in user
         });
 
         await quote.save();
         console.log('Quote object saved');
+
         // Add the quote to the user's quotes field
         const user = await User.findById(req.userId);
         if (user) {
@@ -205,12 +263,14 @@ app.post('/quotes', authenticate, async (req, res) => {
             await user.save();
             console.log('Quote object added to user');
         }
+
         res.status(201).json({ message: 'Quote added successfully', quote });
     } catch (error) {
         console.error('Error adding quote (backend):', error);
         res.status(500).json({ message: 'Failed to add quote (backend)' });
     }
 });
+
 
 //Get Quotes by User
 app.get('/quotes', authenticate, async (req, res) => {
@@ -328,50 +388,104 @@ app.delete('/quotes/:id', authenticate, async (req, res) => {
     }
 });
 
-//Update Selected Quotes
-app.post('/quotes/selected', authenticate, async (req, res) => {
-    const { selectedQuotes } = req.body;
+// Update the selection status of a single quote
+app.patch('/quotes/:id/selection', authenticate, async (req, res) => {
+    console.log('Received payload:', req.body); // Log the incoming payload
+    console.log('Received quote ID:', req.params.id);
+    const { id } = req.params;
+    const { selected } = req.body;
 
-    if (!Array.isArray(selectedQuotes) || selectedQuotes.length > 21) {
-        return res.status(400).json({ message: 'You must select between 1 and 21 quotes.' });
+    if (typeof selected !== 'boolean') {
+        return res.status(400).json({ message: 'Invalid selection value. Must be true or false.' });
     }
 
     try {
-        // Step 1: Update the user's selectedQuotes
-        const user = await User.findById(req.userId);
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+        // Step 1: Find the quote by ID and ensure it belongs to the authenticated user
+        const quote = await Quote.findOne({ _id: id, user: req.userId });
+        if (!quote) {
+            return res.status(404).json({ message: 'Quote not found' });
         }
 
-        user.selectedQuotes = selectedQuotes;
-        await user.save();
-        console.log('user.selectedQuotes updated:', user.selectedQuotes);
+        // Step 2: Check the 21-quote limit for selected quotes
+        if (selected) {
+            const selectedQuotesCount = await Quote.countDocuments({ user: req.userId, selected: true });
+            if (selectedQuotesCount >= 21) {
+                return res.status(400).json({ message: 'You can only select up to 21 quotes.' });
+            }
+        }
 
-        // Step 2: Update or create the schedule using the user's selectedQuotes
+        // Step 3: Update the selected field for the quote
+        quote.selected = selected;
+        await quote.save();
+        console.log(`Quote selection updated. Quote ID: ${quote._id}, Selected: ${quote.selected}`);
+
+        // Step 4: Update or create the schedule if required
         let schedule = await Schedule.findOne({ user: req.userId });
-
         if (!schedule) {
-            // Create a new schedule if one doesn't exist
-            schedule = new Schedule({
-                user: req.userId,
-                selectedQuotes: user.selectedQuotes, // Use updated selectedQuotes from user
-                nextIndex: 0,
-            });
-        } else {
-            // Update existing schedule
-            schedule.selectedQuotes = user.selectedQuotes;
-            schedule.nextIndex = 0;
+            schedule = new Schedule({ user: req.userId, selectedQuotes: [] });
         }
 
-        await schedule.save();
-        console.log('schedule.selectedQuotes updated:', schedule.selectedQuotes);
+        if (selected) {
+            schedule.selectedQuotes.push(quote._id);
+        } else {
+            schedule.selectedQuotes = schedule.selectedQuotes.filter((qid) => qid.toString() !== quote._id.toString());
+        }
 
-        res.status(200).json({ message: 'Selected quotes updated successfully.' });
+        schedule.selectedQuotes = schedule.selectedQuotes.slice(0, 21); // Ensure it doesn't exceed 21
+        await schedule.save();
+        console.log('Schedule updated:', schedule.selectedQuotes);
+
+        res.status(200).json({ message: 'Quote selection updated successfully.', quote });
     } catch (error) {
-        console.error('Error updating selected quotes:', error);
-        res.status(500).json({ message: 'Failed to update selected quotes.' });
+        console.error('Error updating quote selection:', error);
+        res.status(500).json({ message: 'Failed to update quote selection.' });
     }
 });
+
+// //Update Selected Quotes
+// app.post('/quotes/selection', authenticate, async (req, res) => {
+//     const { selectedQuotes } = req.body;
+
+//     if (!Array.isArray(selectedQuotes) || selectedQuotes.length > 21) {
+//         return res.status(400).json({ message: 'You must select between 1 and 21 quotes.' });
+//     }
+
+//     try {
+//         // Step 1: Update the user's selectedQuotes
+//         const user = await User.findById(req.userId);
+//         if (!user) {
+//             return res.status(404).json({ message: 'User not found' });
+//         }
+
+//         user.selectedQuotes = selectedQuotes;
+//         await user.save();
+//         console.log('user.selectedQuotes updated:', user.selectedQuotes);
+
+//         // Step 2: Update or create the schedule using the user's selectedQuotes
+//         let schedule = await Schedule.findOne({ user: req.userId });
+
+//         if (!schedule) {
+//             // Create a new schedule if one doesn't exist
+//             schedule = new Schedule({
+//                 user: req.userId,
+//                 selectedQuotes: user.selectedQuotes, // Use updated selectedQuotes from user
+//                 nextIndex: 0,
+//             });
+//         } else {
+//             // Update existing schedule
+//             schedule.selectedQuotes = user.selectedQuotes;
+//             schedule.nextIndex = 0;
+//         }
+
+//         await schedule.save();
+//         console.log('schedule.selectedQuotes updated:', schedule.selectedQuotes);
+
+//         res.status(200).json({ message: 'Selected quotes updated successfully.' });
+//     } catch (error) {
+//         console.error('Error updating selected quotes:', error);
+//         res.status(500).json({ message: 'Failed to update selected quotes.' });
+//     }
+// });
 
 //Fetch Selected Quotes
 app.get('/quotes/selected', authenticate, async (req, res) => {
