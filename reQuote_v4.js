@@ -159,7 +159,7 @@ app.post('/logout', (req, res) => {
     jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
         if (err) {
             if (err.name === 'TokenExpiredError') {
-                console.log(`${decoded.email} logged out for expired token`);
+                console.log(`${decoded.email} auto-logged out for expired token`);
                 return res.status(200).json({ message: 'Token expired, but logout successful' });
             }
             console.error('Invalid token during logout:', err.message);
@@ -242,7 +242,7 @@ app.post('/quotes/reorder', authenticate, async (req, res) => {
 //Edit quote (logged...)
 
 app.put('/quotes/:id', async (req, res) => {
-    console.log('Attempt to edit quote hit the backend');
+    //console.log('Attempt to edit quote hit the backend');
     try {
         const { id } = req.params; // Extract the quote ID from the URL parameters
         const { content, author, source } = req.body; // Extract updated fields from the request body

@@ -18,7 +18,6 @@ let draggedItem = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log("Dashboard loaded");
-
     // Check for token
     const token = getToken();
     if (!token) {
@@ -82,7 +81,7 @@ if (addQuoteForm) {
 
 // ✅ Safe Loading Quotes Function
 export async function loadQuotes() {
-    console.log("loadQuotes ran (dashboard.js)");
+    console.log("loadQuotes queried the backend from dashboard.js)");
     try {
         const response = await fetch('/quotes', {
             method: 'GET',
@@ -112,145 +111,140 @@ export async function loadQuotes() {
 //Render Each Quote Box
 function renderQuoteBox(quote) {
 
-    const existingQuoteBox = document.getElementById(`quote-${quote._id}`);
-    if (existingQuoteBox) {
-        console.log("Updating existing quoteBox:", existingQuoteBox);
-    } else {
-        console.log("Creating a new quoteBox for quote ID:", quote._id);
-    }
+    // const existingQuoteBox = document.getElementById(`quote-${quote._id}`);
+    // if (existingQuoteBox) {
+    //     console.log("Updating existing quoteBox:", existingQuoteBox);
+    // } else {
+    //     console.log("Creating a new quoteBox for quote ID:", quote._id);
+    // }
 
     if (!quote || !quote.content || !quote.author) {
         console.error("Invalid or incomplete quote data:", quote);
         return; // Prevent rendering
     }
         console.log("renderQuoteBox ran in dashboard.js");
-        console.log("Rendering quote with ID:", quote._id);
+        //console.log("Rendering quote with ID:", quote._id);
 
-        const quoteBox = document.createElement('div'); // Create a container for the quote
-        quoteBox.className = 'quote-box'; // Add a class for styling
-        quoteBox.id = `quote-${quote._id}`; // Assign a unique ID for reference
-        console.log("QuoteBox being re-rendered:", quoteBox);
-        
-        // Add the quote content
+        const quoteBox = document.createElement('div');
+        quoteBox.className = 'quote-box';
+        quoteBox.id = `quote-${quote._id}`;
+        //console.log("QuoteBox being re-rendered:", quoteBox);
+    
+        // Create the left button container for the reorder icon
+        const leftButtonContainer = document.createElement('div');
+        leftButtonContainer.className = 'leftButtonContainer';
+    
+        const reorderIcon = document.createElement('div');
+        reorderIcon.className = 'reorder-icon';
+        reorderIcon.title = 'Drag to reorder';
+    
+        for (let i = 0; i < 3; i++) {
+            const line = document.createElement('div');
+            reorderIcon.appendChild(line);
+        }
+    
+        leftButtonContainer.appendChild(reorderIcon);
+    
+        // Create the content container for the quote text, author, and source
+        const contentContainer = document.createElement('div');
+        contentContainer.className = 'contentContainer';
+    
         const content = document.createElement('p');
         content.textContent = quote.content;
-        content.className = 'quote-content'; // Add a class for styling
-
-        // Combined Author and Source (Same Line)
+        content.className = 'quote-content';
+    
         const authorAndSource = document.createElement('p');
         authorAndSource.className = 'quote-author-source';
-        
-        // Separate spans for styling
+    
         const authorSpan = document.createElement('span');
         authorSpan.textContent = quote.author;
         authorSpan.className = 'quote-author-normal';
-
-        // Create a span for the separator
+    
         const authorSourceSeparator = document.createElement('span');
         authorSourceSeparator.textContent = ', ';
-        authorSourceSeparator.className = 'quote-author-normal'; // Use the same styling as the author
-
-        //NEW FOR LINK
+        authorSourceSeparator.className = 'quote-author-normal';
+    
         const sourceSpan = document.createElement('span');
         if (quote.sourceLink && quote.sourceLink.trim() !== '') {
-            // New functionality: Create clickable link for sourceLink
             sourceSpan.innerHTML = `<a href="${quote.sourceLink}" target="_blank" rel="noopener noreferrer" style="color: #2196F3; text-decoration: none;">${quote.source}</a>`;
             sourceSpan.className = 'quote-source-italic';
-            sourceSpan.title = 'Search for this book on Amazon'
+            sourceSpan.title = 'Search for this book on Amazon';
         } else if (quote.source && quote.source.trim() !== '') {
-            sourceSpan.textContent = quote.source; // Fallback to plain text if no link
+            sourceSpan.textContent = quote.source;
             sourceSpan.className = 'quote-source-italic';
         } else {
             sourceSpan.textContent = '(unsourced)';
             sourceSpan.className = 'quote-source-italic';
         }
-
-        // Append both spans inside the same element
+    
         authorAndSource.appendChild(authorSpan);
         if (quote.source && quote.source.trim() !== '') {
             authorAndSource.appendChild(authorSourceSeparator);
             authorAndSource.appendChild(sourceSpan);
         }
-
-        // Create the reordering icon
-        const reorderIcon = document.createElement('div');
-        reorderIcon.className = 'reorder-icon'; // Add a class for styling
-        reorderIcon.title = 'Drag to reorder'; // Hover message
-
-        // Add the three lines to the reorder icon
-        for (let i = 0; i < 3; i++) {
-            const line = document.createElement('div');
-            reorderIcon.appendChild(line);
-        }
-
-        // Create a delete button
+    
+        contentContainer.appendChild(content);
+        contentContainer.appendChild(authorAndSource);
+    
+        // Create the right button container for delete, edit, and email buttons
+        const rightButtonContainer = document.createElement('div');
+        rightButtonContainer.className = 'rightButtonContainer';
+    
         const deleteButton = document.createElement('button');
-        deleteButton.className = 'delete-button'; // Add a class for styling
+        deleteButton.className = 'delete-button';
         deleteButton.innerHTML = '&#10006;';
-        deleteButton.title = 'Delete this quote'; // Hover message
+        deleteButton.title = 'Delete this quote';
         deleteButton.addEventListener('click', async () => {
             if (confirm('Are you sure you want to delete this quote?')) {
-                await deleteQuote(quote._id); // Call the delete function
-                loadQuotes(); // Refresh the quotes list
+                await deleteQuote(quote._id);
+                loadQuotes();
             }
         });
-
-        // Create the edit button (orange color, placed between delete and email icon)
+    
         const editButton = document.createElement('button');
         editButton.className = 'edit-button';
         editButton.innerHTML = '&#9998;';
-        //editButton.innerHTML = '<span style="color: black; font-weight: bold;">&#9998;</span>'; // Unicode pencil icon
-        editButton.title = 'Edit this quote'; // Hover message
+        editButton.title = 'Edit this quote';
         editButton.addEventListener('click', () => enableEditMode(quote));
-
-            // Create email icon
-        const emailButton = document.createElement('div');
-        emailButton.className = 'email-button'; // Add a class for styling
-        emailButton.innerHTML = '&#9993;'; // Email icon
-        emailButton.title = 'Add or remove this quote from your email schedule'; // Hover message
-
-        //----Toggle selection logic
+    
+        const emailButton = document.createElement('button');
+        emailButton.className = 'email-button';
+        emailButton.innerHTML = '&#9993;';
+        emailButton.title = 'Add or remove this quote from your email schedule';
+    
         if (selectedQuotes.includes(quote._id)) {
-        emailButton.classList.add('selected');
+            emailButton.classList.add('selected');
         }
-
+    
         emailButton.addEventListener('click', async (event) => {
             const index = selectedQuotes.indexOf(quote._id);
     
             if (index > -1) {
-                // Unselect the quote
                 selectedQuotes.splice(index, 1);
                 emailButton.classList.remove('selected');
             } else if (selectedQuotes.length < 21) {
-                // Select the quote
                 selectedQuotes.push(quote._id);
                 emailButton.classList.add('selected');
             } else {
                 alert('You can select up to 21 quotes only.');
             }
     
-            console.log("Updated selectedQuotes:", selectedQuotes);
+            //console.log("Updated selectedQuotes:", selectedQuotes);
     
-            // Send updated selections to the backend
             await updateSelectedQuotesInBackend();
             event.stopPropagation();
         });
-        
-        const buttonContainer = document.createElement('div');
-        
-        buttonContainer.className = 'buttonContainer';
+    
+        rightButtonContainer.appendChild(deleteButton);
+        rightButtonContainer.appendChild(editButton);
+        rightButtonContainer.appendChild(emailButton);
+    
+        // Append all containers to the quoteBox
+        quoteBox.appendChild(leftButtonContainer);
+        quoteBox.appendChild(contentContainer);
+        quoteBox.appendChild(rightButtonContainer);
 
-        buttonContainer.appendChild(deleteButton);
-        buttonContainer.appendChild(editButton);
-        buttonContainer.appendChild(emailButton);
-
-        // Append content, author, and delete button to the box
-        quoteBox.appendChild(content);
-        quoteBox.appendChild(authorAndSource);
-        quoteBox.appendChild(reorderIcon);
-        quoteBox.appendChild(buttonContainer);
-
-        console.log("Final re-rendered quoteBox content:", quoteBox.innerHTML);
+        //console.log("Final re-rendered quoteBox content:", quoteBox.innerHTML);
 
         // Allow dragging only when clicking the icon but move the whole box
         reorderIcon.setAttribute('draggable', true); 
@@ -261,23 +255,8 @@ function renderQuoteBox(quote) {
         quoteBox.addEventListener('dragover', handleDragOver);
         quoteBox.addEventListener('drop', handleDrop);
 
-        
-
         // Add the quote box to the quotes list
-        quotesList.appendChild(quoteBox);
-
-        //   // --------------------------------------------Append to DOM or replace existing
-        //   if (existingQuoteBox) {
-        //     console.log("Replacing existing quoteBox for ID:", quote._id);
-        //     quotesList.replaceChild(quoteBox, existingQuoteBox);
-        // } else {
-        //     console.log("Appending new quoteBox for ID:", quote._id);
-        //     quotesList.appendChild(quoteBox);
-        // }
-
-
-        
-          
+        quotesList.appendChild(quoteBox);        
 }
 
 //Fetch Selected Quotes from Backend
@@ -368,7 +347,10 @@ function enableEditMode(quote) {
         //updated editable fields
 
         quoteBox.classList.add('edit-mode'); // Add the "edit-mode" class
-        quoteBox.innerHTML = `
+
+    // Replace the inner content of the quoteBox with editable fields
+    quoteBox.innerHTML = `
+        <div class="contentContainer">
             <label for="edit-content-${quote._id}" class="edit-label">Quote</label>
             <textarea id="edit-content-${quote._id}" class="edit-field">${quote.content}</textarea>
 
@@ -377,12 +359,13 @@ function enableEditMode(quote) {
 
             <label for="edit-source-${quote._id}" class="edit-label">Source</label>
             <input id="edit-source-${quote._id}" class="edit-field" value="${quote.source || ''}" />
+        </div>
 
-            <div class="button-container">
-                <button id="cancel-${quote._id}" class="cancel-button">Cancel</button>
-                <button id="save-${quote._id}" class="save-button">Save</button>
-            </div>
-        `;
+        <div class="button-container edit-mode">
+            <button id="cancel-${quote._id}" class="cancel-button">Cancel</button>
+            <button id="save-${quote._id}" class="save-button">Save</button>
+        </div>
+    `;
 
         // Add event listeners for save and cancel buttons
         document.getElementById(`save-${quote._id}`).addEventListener('click', () => saveQuote(quote));
@@ -423,42 +406,6 @@ async function saveQuote(quote) {
         } else {
             console.error("Failed to save updated quote, response status:", response.status);
         }
-
-        // if (response.ok) {
-        //     const updatedQuote = await response.json();
-        //     showNotification('Quote edited successfully', 'success');
-        //     console.log("Updated quote received from backend:", updatedQuote);
-        
-        //     // Replace the existing quote in the DOM
-        //     if (updatedQuote && updatedQuote.content && updatedQuote.author) {
-        //         const quoteBox = document.getElementById(`quote-${quote._id}`);
-        //         console.log("Existing quoteBox before rendering:", quoteBox);
-                
-        //         if (quoteBox) {
-        //             console.log("Before clearing quoteBox content:", quoteBox.innerHTML); // Log current content
-        //             quoteBox.innerHTML = ''; // Clear the content
-        //             console.log("After clearing quoteBox content:", quoteBox.innerHTML); // Log to ensure it's empty
-                
-        //             renderQuoteBox(updatedQuote); // Re-render the updated quote
-        //       //  }
-                
-
-        //         // if (quoteBox) {
-        //         //     console.log("Clearing and re-rendering the quoteBox.");
-        //         //     quoteBox.innerHTML = ''; // Clear and re-render
-        //         //     renderQuoteBox(updatedQuote);
-        //         //    //quoteBox.classList.remove('edit-mode'); // Remove edit-mode after rendering
-        //          } else {
-        //             console.error("QuoteBox not found for ID:", `quote-${quote._id}`);
-        //         }
-        //     } else {
-        //         console.error("Received incomplete updated quote:", updatedQuote);
-        //     }
-        
-        //     console.log("QuoteBox after rendering:", document.getElementById(`quote-${quote._id}`));
-        // } else {
-        //     console.error("Failed to save updated quote, response status:", response.status);
-        // }
     } catch (error) {
         console.error(`Error saving quote with ID ${quote._id}:`, error);
         alert('Failed to save quote.');
