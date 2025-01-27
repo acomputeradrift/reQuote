@@ -95,46 +95,72 @@ export async function loadQuotes() {
 
         if (response.ok) {
             console.log("loadQuotes got an OK response from backend");
+          
             const quotes = await response.json();
-
+        
             // Store quotes globally
             allQuotes = quotes;
-
-            // Separate selected and non-selected quotes
-            //const selectedQuotes = quotes.filter(quote => quote.selected);
-            const selectedQuotes = allQuotes.filter(q => q.selected);
-
             console.log('allQuotes:', allQuotes);
-            const nonSelectedQuotes = allQuotes
-            .filter(q => !q.selected)
-            .sort((a, b) => a.position - b.position); // Sort by position
-
-            console.log('nonSelectedQuotes:', nonSelectedQuotes);
-            console.log('Positions of nonSelectedQuotes:', nonSelectedQuotes.map(q => q.position));
-
-
-            //const nonSelectedQuotes = quotes.filter(quote => !quote.selected);
-
-            // Sort each group by position
-            selectedQuotes.sort((a, b) => a.position - b.position);
-            nonSelectedQuotes.sort((a, b) => a.position - b.position);
-
+            console.log('Quotes received from backend:', quotes.map(q => ({
+                id: q._id,
+                position: q.position,
+                selected: q.selected
+            })));
             // Clear and render quotes
             quotesList.innerHTML = '';
-
-            // Render selected quotes first
-            selectedQuotes.forEach((quote) => {
-                renderQuoteBox(quote);
-            });
-
-            // Render non-selected quotes below
-            nonSelectedQuotes.forEach((quote) => {
+        
+            // Render quotes directly as returned by the backend
+            allQuotes.forEach((quote) => {
                 renderQuoteBox(quote);
             });
         } else {
             console.log("loadQuotes DID NOT get an OK response from backend");
             console.error('Failed to load quotes');
         }
+        
+
+        // if (response.ok) {
+        //     console.log("loadQuotes got an OK response from backend");
+        //     const quotes = await response.json();
+
+        //     // Store quotes globally
+        //     allQuotes = quotes;
+
+        //     // Separate selected and non-selected quotes
+        //     //const selectedQuotes = quotes.filter(quote => quote.selected);
+        //     const selectedQuotes = allQuotes.filter(q => q.selected);
+
+        //     console.log('allQuotes:', allQuotes);
+        //     const nonSelectedQuotes = allQuotes
+        //     .filter(q => !q.selected)
+        //     .sort((a, b) => a.position - b.position); // Sort by position
+
+        //     console.log('nonSelectedQuotes:', nonSelectedQuotes);
+        //     console.log('Positions of nonSelectedQuotes:', nonSelectedQuotes.map(q => q.position));
+
+
+        //     //const nonSelectedQuotes = quotes.filter(quote => !quote.selected);
+
+        //     // Sort each group by position
+        //     selectedQuotes.sort((a, b) => a.position - b.position);
+        //     nonSelectedQuotes.sort((a, b) => a.position - b.position);
+
+        //     // Clear and render quotes
+        //     quotesList.innerHTML = '';
+
+        //     // Render selected quotes first
+        //     selectedQuotes.forEach((quote) => {
+        //         renderQuoteBox(quote);
+        //     });
+
+        //     // Render non-selected quotes below
+        //     nonSelectedQuotes.forEach((quote) => {
+        //         renderQuoteBox(quote);
+        //     });
+        // } else {
+        //     console.log("loadQuotes DID NOT get an OK response from backend");
+        //     console.error('Failed to load quotes');
+        // }
     } catch (error) {
         console.log("loadQuotes failed completely");
         console.error('Error loading quotes:', error);
@@ -489,7 +515,7 @@ async function deleteQuote(quoteId) {
 // Corrected dragStart handler for dragging the entire quoteBox only when clicking the reorderIcon
 
 function handleDragStart(event) {
-    console.log('Drag started on:', event.target); // Logs the element being dragged
+    //console.log('Drag started on:', event.target); // Logs the element being dragged
     draggedItem = event.target.closest('.quote-box'); // Ensure the whole quoteBox is dragged
     if (draggedItem) {
         draggedItem.style.opacity = '0.5'; // Visual cue

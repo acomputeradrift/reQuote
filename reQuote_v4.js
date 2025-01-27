@@ -7,6 +7,7 @@ dotenv.config();
 
 import { generateAmazonLink } from './utils/amazonLink.js';
 import { truncateQuoteContent } from './utils/truncateQuoteContent.js';
+import { reorderQuotes } from './utils/sortingAlgorithm.js';
 
 import express from 'express';
 import mongoose from 'mongoose';
@@ -342,9 +343,8 @@ app.delete('/quotes/:id', authenticate, async (req, res) => {
 });
 
 // Update the selection status of a single quote
+
 app.patch('/quotes/:id/selection', authenticate, async (req, res) => {
-    //console.log('Received payload:', req.body); // Log the incoming payload
-    //console.log('Received quote ID:', req.params.id);
     const { id } = req.params;
     const { selected } = req.body;
 
@@ -359,50 +359,43 @@ app.patch('/quotes/:id/selection', authenticate, async (req, res) => {
             return res.status(404).json({ message: 'Quote not found' });
         }
 
-        // Step 2: Check the 21-quote limit for selected quotes
+        // Step 2: Update the selected field for the quote
+        quote.selected = selected;
+
         if (selected) {
+            // Ensure the 21-quote limit is not exceeded
             const selectedQuotesCount = await Quote.countDocuments({ user: req.userId, selected: true });
             if (selectedQuotesCount >= 21) {
                 return res.status(400).json({ message: 'You can only select up to 21 quotes.' });
             }
-        }
 
-        // Step 3: Update the selected field for the quote
-        quote.selected = selected;
-
-        // SORTING
-        if (selected) {
-            // Add the quote to the bottom of the selected group
+            // Assign the quote to the bottom of the selected group
             const selectedQuotes = await Quote.find({ user: req.userId, selected: true }).sort({ position: 1 });
             quote.position = selectedQuotes.length > 0
                 ? Math.max(...selectedQuotes.map(q => q.position)) + 1
                 : 0;
+
         } else {
-            // Add the quote to the top of the unselected group
+            // Assign the quote to the top of the unselected group
             const unselectedQuotes = await Quote.find({ user: req.userId, selected: false }).sort({ position: 1 });
-            quote.position = unselectedQuotes.length > 0
-                ? Math.min(...unselectedQuotes.map(q => q.position)) - 1
-                : 0;
+            quote.position = 0;
+
+            // Shift positions of all other unselected quotes
+            for (const q of unselectedQuotes) {
+                q.position += 1;
+                await q.save();
+            }
         }
 
         await quote.save();
-        
-        // Log the desired message
-        // Truncate the content for the log
+
+        // Log the action
         const truncatedContent = truncateQuoteContent(quote.content);
         console.log(
             `${quote.user.email} ${quote.selected ? 'selected' : 'deselected'} the quote "${truncatedContent}" for scheduled email.`
         );
 
-        // Reassign positions for all quotes in the same group
-        const allQuotes = await Quote.find({ user: req.userId }).sort({ position: 1 });
-        let currentPosition = 0;
-        for (const q of allQuotes.filter(q => q.selected === selected)) {
-            q.position = currentPosition++;
-            await q.save();
-        }
-
-        // Step 4: Update or create the schedule if required
+        // Step 3: Update the schedule
         let schedule = await Schedule.findOne({ user: req.userId });
         if (!schedule) {
             schedule = new Schedule({ user: req.userId, selectedQuotes: [] });
@@ -414,15 +407,14 @@ app.patch('/quotes/:id/selection', authenticate, async (req, res) => {
             schedule.selectedQuotes = schedule.selectedQuotes.filter((qid) => qid.toString() !== quote._id.toString());
         }
 
-        // Ensure it doesn't exceed 21
-        schedule.selectedQuotes = schedule.selectedQuotes.slice(0, 21);
+        schedule.selectedQuotes = schedule.selectedQuotes.slice(0, 21); // Ensure it doesn't exceed 21
         await schedule.save();
 
-        // Log the updated schedule information
         console.log(
             `${quote.user.email} now has ${schedule.selectedQuotes.length} quotes scheduled for email.`
         );
 
+        // Step 4: Respond with success
         res.status(200).json({ message: 'Quote selection updated successfully.', quote });
 
     } catch (error) {
@@ -430,6 +422,104 @@ app.patch('/quotes/:id/selection', authenticate, async (req, res) => {
         res.status(500).json({ message: 'Failed to update quote selection.' });
     }
 });
+
+
+// app.patch('/quotes/:id/selection', authenticate, async (req, res) => {
+//     //console.log('Received payload:', req.body); // Log the incoming payload
+//     //console.log('Received quote ID:', req.params.id);
+//     const { id } = req.params;
+//     const { selected } = req.body;
+
+//     if (typeof selected !== 'boolean') {
+//         return res.status(400).json({ message: 'Invalid selection value. Must be true or false.' });
+//     }
+
+//     try {
+//         // Step 1: Find the quote by ID and ensure it belongs to the authenticated user
+//         const quote = await Quote.findOne({ _id: id, user: req.userId }).populate('user', 'email');
+//         if (!quote) {
+//             return res.status(404).json({ message: 'Quote not found' });
+//         }
+
+//         // Step 1: Update the selected field for the quote
+//         quote.selected = selected;
+
+//         // Step 2: Handle sorting and position assignment based on the updated selection status
+//         if (selected) {
+//             // Ensure the 21-quote limit is not exceeded
+//             const selectedQuotesCount = await Quote.countDocuments({ user: req.userId, selected: true });
+//             if (selectedQuotesCount >= 21) {
+//                 return res.status(400).json({ message: 'You can only select up to 21 quotes.' });
+//             }
+
+//             // Assign the quote to the bottom of the selected group
+//             const selectedQuotes = await Quote.find({ user: req.userId, selected: true }).sort({ position: 1 });
+//             quote.position = selectedQuotes.length > 0
+//                 ? Math.max(...selectedQuotes.map(q => q.position)) + 1
+//                 : 0;
+//         } else {
+//             // Assign the quote to the top of the unselected group
+//             const unselectedQuotes = await Quote.find({ user: req.userId, selected: false }).sort({ position: 1 });
+//             quote.position = unselectedQuotes.length > 0
+//                 ? Math.min(...unselectedQuotes.map(q => q.position)) - 1
+//                 : 0;
+//         }
+
+//         await quote.save();
+//         // Log the desired message
+//         // Truncate the content for the log
+//         const truncatedContent = truncateQuoteContent(quote.content);
+//         console.log(
+//             `${quote.user.email} ${quote.selected ? 'selected' : 'deselected'} the quote "${truncatedContent}" for scheduled email.`
+//         );
+
+//         // Reassign positions for all quotes in the same group
+//         //const allQuotes = await Quote.find({ user: req.userId }).sort({ position: 1 });
+
+//         // Reassign positions for all quotes
+//         const allQuotes = await Quote.find({ user: req.userId });
+//         const reorderedQuotes = reorderQuotes(allQuotes);
+
+//         // Save updated positions to the database
+//         for (const q of reorderedQuotes) {
+//             await Quote.findByIdAndUpdate(q._id, { position: q.position });
+//         }
+
+//         const updatedQuotes = await Quote.find({ user: req.userId }).sort({ position: 1 });
+//         console.log('Database state after reordering:', updatedQuotes.map(q => ({
+//             id: q._id,
+//             position: q.position,
+//             selected: q.selected,
+//         })));
+
+//         // -------------------------------------------Step 4: Update or create the schedule if required
+//         let schedule = await Schedule.findOne({ user: req.userId });
+//         if (!schedule) {
+//             schedule = new Schedule({ user: req.userId, selectedQuotes: [] });
+//         }
+
+//         if (selected) {
+//             schedule.selectedQuotes.push(quote._id);
+//         } else {
+//             schedule.selectedQuotes = schedule.selectedQuotes.filter((qid) => qid.toString() !== quote._id.toString());
+//         }
+
+//         // Ensure it doesn't exceed 21
+//         schedule.selectedQuotes = schedule.selectedQuotes.slice(0, 21);
+//         await schedule.save();
+
+//         // Log the updated schedule information
+//         console.log(
+//             `${quote.user.email} now has ${schedule.selectedQuotes.length} quotes scheduled for email.`
+//         );
+
+//         res.status(200).json({ message: 'Quote selection updated successfully.', quote });
+
+//     } catch (error) {
+//         console.error('Error updating quote selection:', error);
+//         res.status(500).json({ message: 'Failed to update quote selection.' });
+//     }
+// });
 
 app.post('/quotes/update-order-selection', authenticate, async (req, res) => {
     const { quotes } = req.body;
