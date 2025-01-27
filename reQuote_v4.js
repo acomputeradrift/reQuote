@@ -182,47 +182,6 @@ app.post('/logout', (req, res) => {
     });
 });
 
-// // Add Quote (logged...)
-// app.post('/quotes', authenticate, async (req, res) => {
-//     const { content, author, source } = req.body;
-
-//     if (!content || !author) {
-//         return res.status(400).json({ message: 'Content and author are required' });
-//     }
-
-//     try {
-//         // Generate the Amazon link (if source is provided)
-//         const sourceLink = source ? generateAmazonLink(author, source) : null;
-//         // Calculate the next available order for the user's quotes
-//         const userQuotes = await Quote.find({ user: req.userId });
-//         const nextOrder = userQuotes.length; // Assign the next position in the list
-
-//         // Create a new quote
-//         const quote = new Quote({
-//             content,
-//             author,
-//             source,
-//             sourceLink, // Save the generated Amazon link
-//             order: nextOrder, // Assign order
-//             user: req.userId, // Associate the quote with the logged-in user
-//         });
-
-//         await quote.save();
-//         console.log('Quote object saved');
-//         // Add the quote to the user's quotes field
-//         const user = await User.findById(req.userId);
-//         if (user) {
-//             user.quotes.push(quote._id);
-//             await user.save();
-//             console.log('Quote object added to user');
-//         }
-//         res.status(201).json({ message: 'Quote added successfully', quote });
-//     } catch (error) {
-//         console.error('Error adding quote (backend):', error);
-//         res.status(500).json({ message: 'Failed to add quote (backend)' });
-//     }
-// });
-
 // Updated Add Quote Endpoint
 
 app.post('/quotes', authenticate, async (req, res) => { 
@@ -468,51 +427,6 @@ app.patch('/quotes/:id/selection', authenticate, async (req, res) => {
         res.status(500).json({ message: 'Failed to update quote selection.' });
     }
 });
-
-// //Update Selected Quotes
-// app.post('/quotes/selection', authenticate, async (req, res) => {
-//     const { selectedQuotes } = req.body;
-
-//     if (!Array.isArray(selectedQuotes) || selectedQuotes.length > 21) {
-//         return res.status(400).json({ message: 'You must select between 1 and 21 quotes.' });
-//     }
-
-//     try {
-//         // Step 1: Update the user's selectedQuotes
-//         const user = await User.findById(req.userId);
-//         if (!user) {
-//             return res.status(404).json({ message: 'User not found' });
-//         }
-
-//         user.selectedQuotes = selectedQuotes;
-//         await user.save();
-//         console.log('user.selectedQuotes updated:', user.selectedQuotes);
-
-//         // Step 2: Update or create the schedule using the user's selectedQuotes
-//         let schedule = await Schedule.findOne({ user: req.userId });
-
-//         if (!schedule) {
-//             // Create a new schedule if one doesn't exist
-//             schedule = new Schedule({
-//                 user: req.userId,
-//                 selectedQuotes: user.selectedQuotes, // Use updated selectedQuotes from user
-//                 nextIndex: 0,
-//             });
-//         } else {
-//             // Update existing schedule
-//             schedule.selectedQuotes = user.selectedQuotes;
-//             schedule.nextIndex = 0;
-//         }
-
-//         await schedule.save();
-//         console.log('schedule.selectedQuotes updated:', schedule.selectedQuotes);
-
-//         res.status(200).json({ message: 'Selected quotes updated successfully.' });
-//     } catch (error) {
-//         console.error('Error updating selected quotes:', error);
-//         res.status(500).json({ message: 'Failed to update selected quotes.' });
-//     }
-// });
 
 //Fetch Selected Quotes
 app.get('/quotes/selected', authenticate, async (req, res) => {
