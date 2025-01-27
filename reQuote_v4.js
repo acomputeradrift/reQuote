@@ -6,6 +6,7 @@ dotenv.config();
 
 
 import { generateAmazonLink } from './utils/amazonLink.js';
+import { truncateQuoteContent } from './utils/truncateQuoteContent.js';
 
 import express from 'express';
 import mongoose from 'mongoose';
@@ -48,15 +49,6 @@ const userSchema = new mongoose.Schema({
     quotes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Quote' }], // List of user's quotes
     selectedQuotes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Quote' }] // Array of selected quotes
 });
-
-// const quoteSchema = new mongoose.Schema({
-//     content: { type: String, required: true },
-//     author: { type: String, required: true },
-//     source: { type: String, default: 'Unknown' }, // Default value for source
-//     sourceLink: { type: String, default: null },  // Amazon link for the book
-//     order: Number, // Add the order attribute
-//     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-// });
 
 const quoteSchema = new mongoose.Schema({
     content: { type: String, required: true },
@@ -216,14 +208,14 @@ app.post('/quotes', authenticate, async (req, res) => {
         });
 
         await quote.save();
-        console.log('Quote object saved');
+        //console.log('New Quote object saved');
 
         // Add the quote to the user's quotes field
         const user = await User.findById(req.userId);
         if (user) {
             user.quotes.push(quote._id);
             await user.save();
-            console.log('Quote object added to user');
+            console.log('New Quote object added to user');
         }
 
         res.status(201).json({ message: 'Quote added successfully', quote });
@@ -232,7 +224,6 @@ app.post('/quotes', authenticate, async (req, res) => {
         res.status(500).json({ message: 'Failed to add quote (backend)' });
     }
 });
-
 
 //Get Quotes by User
 app.get('/quotes', authenticate, async (req, res) => {
@@ -245,21 +236,21 @@ app.get('/quotes', authenticate, async (req, res) => {
 });
 
 //Reorder Quotes
-app.post('/quotes/reorder', authenticate, async (req, res) => {
-    const updates = req.body; // Array of { id, order }
-    //console.log('Reorder updates received:', updates);
+// app.post('/quotes/reorder', authenticate, async (req, res) => {
+//     const updates = req.body; // Array of { id, order }
+//     //console.log('Reorder updates received:', updates);
 
-    try {
-        for (const { id, order } of updates) {
-            //console.log(`Updating quote ID ${id} to order ${order}`);
-            await Quote.findByIdAndUpdate(id, { order });
-        }
-        res.status(200).json({ message: 'Order updated successfully' });
-    } catch (error) {
-        console.error('Error updating order (backend):', error);
-        res.status(500).json({ message: 'Failed to update order (backend)' });
-    }
-});
+//     try {
+//         for (const { id, order } of updates) {
+//             //console.log(`Updating quote ID ${id} to order ${order}`);
+//             await Quote.findByIdAndUpdate(id, { order });
+//         }
+//         res.status(200).json({ message: 'Order updated successfully' });
+//     } catch (error) {
+//         console.error('Error updating order (backend):', error);
+//         res.status(500).json({ message: 'Failed to update order (backend)' });
+//     }
+// });
 
 //Edit quote (logged...)
 
@@ -352,8 +343,8 @@ app.delete('/quotes/:id', authenticate, async (req, res) => {
 
 // Update the selection status of a single quote
 app.patch('/quotes/:id/selection', authenticate, async (req, res) => {
-    console.log('Received payload:', req.body); // Log the incoming payload
-    console.log('Received quote ID:', req.params.id);
+    //console.log('Received payload:', req.body); // Log the incoming payload
+    //console.log('Received quote ID:', req.params.id);
     const { id } = req.params;
     const { selected } = req.body;
 
@@ -363,7 +354,7 @@ app.patch('/quotes/:id/selection', authenticate, async (req, res) => {
 
     try {
         // Step 1: Find the quote by ID and ensure it belongs to the authenticated user
-        const quote = await Quote.findOne({ _id: id, user: req.userId });
+        const quote = await Quote.findOne({ _id: id, user: req.userId }).populate('user', 'email');
         if (!quote) {
             return res.status(404).json({ message: 'Quote not found' });
         }
@@ -395,7 +386,13 @@ app.patch('/quotes/:id/selection', authenticate, async (req, res) => {
         }
 
         await quote.save();
-        console.log(`Quote selection updated. Quote ID: ${quote._id}, Selected: ${quote.selected}`);
+        
+        // Log the desired message
+        // Truncate the content for the log
+        const truncatedContent = truncateQuoteContent(quote.content);
+        console.log(
+            `${quote.user.email} ${quote.selected ? 'selected' : 'deselected'} the quote "${truncatedContent}" for scheduled email.`
+        );
 
         // Reassign positions for all quotes in the same group
         const allQuotes = await Quote.find({ user: req.userId }).sort({ position: 1 });
@@ -417,31 +414,41 @@ app.patch('/quotes/:id/selection', authenticate, async (req, res) => {
             schedule.selectedQuotes = schedule.selectedQuotes.filter((qid) => qid.toString() !== quote._id.toString());
         }
 
-        schedule.selectedQuotes = schedule.selectedQuotes.slice(0, 21); // Ensure it doesn't exceed 21
+        // Ensure it doesn't exceed 21
+        schedule.selectedQuotes = schedule.selectedQuotes.slice(0, 21);
         await schedule.save();
-        console.log('Schedule updated:', schedule.selectedQuotes);
+
+        // Log the updated schedule information
+        console.log(
+            `${quote.user.email} now has ${schedule.selectedQuotes.length} quotes scheduled for email.`
+        );
 
         res.status(200).json({ message: 'Quote selection updated successfully.', quote });
+
     } catch (error) {
         console.error('Error updating quote selection:', error);
         res.status(500).json({ message: 'Failed to update quote selection.' });
     }
 });
 
-//Fetch Selected Quotes
-app.get('/quotes/selected', authenticate, async (req, res) => {
+app.post('/quotes/update-order-selection', authenticate, async (req, res) => {
+    const { quotes } = req.body;
+
+    console.log('Received updated order from frontend:', quotes);
+
+    if (!Array.isArray(quotes)) {
+        return res.status(400).json({ message: 'Invalid input data' });
+    }
+
     try {
-        //console.log('Fetching selected quotes'); // Log the request
-
-        const user = await User.findById(req.userId).populate('selectedQuotes');
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+        for (const { id, position, selected } of quotes) {
+            await Quote.findByIdAndUpdate(id, { position, selected });
         }
-
-        res.status(200).json({ selectedQuotes: user.selectedQuotes.map((quote) => quote._id) });
+        console.log('Quotes updated successfully');
+        res.status(200).json({ message: 'Order and selection updated successfully' });
     } catch (error) {
-        console.error('Error fetching selected quotes:', error);
-        res.status(500).json({ message: 'Failed to fetch selected quotes.' });
+        console.error('Error updating order and selection:', error);
+        res.status(500).json({ message: 'Failed to update order and selection' });
     }
 });
 

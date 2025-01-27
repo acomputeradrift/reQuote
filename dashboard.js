@@ -316,31 +316,67 @@ async function updateQuoteSelectionInBackend(id, selected) {
     }
 }
 
-async function saveOrderAndSelection() {
-    try {
-        const updatedQuotes = allQuotes.map(quote => ({
-            _id: quote._id,
-            selected: quote.selected,
-            position: quote.position,
-        }));
+//Update backend after drag
 
+async function saveOrderAndSelectionAfterDrag() {
+    const newOrder = allQuotes.map((q, index) => ({
+        id: q._id,
+        position: index,
+        selected: q.selected,
+    }));
+
+    console.log('Sending updated order to backend:', newOrder);
+
+    try {
         const response = await fetch('/quotes/update-order-selection', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ quotes: updatedQuotes }),
+            body: JSON.stringify({ quotes: newOrder }),
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Failed to update order and selection:', errorData.message);
+        const rawText = await response.text();
+        console.log('Raw backend response:', rawText);
+
+        if (response.ok) {
+            const result = JSON.parse(rawText);
+            console.log('Order and selection saved successfully:', result);
+        } else {
+            console.error('Error saving order and selection:', rawText);
         }
     } catch (error) {
         console.error('Error saving order and selection:', error);
     }
 }
+
+
+// async function saveOrderAndSelectionAfterDrag() {
+//     try {
+//         const updatedQuotes = allQuotes.map(quote => ({
+//             _id: quote._id,
+//             selected: quote.selected,
+//             position: quote.position,
+//         }));
+
+//         const response = await fetch('/quotes/update-order-selection', {
+//             method: 'POST',
+//             headers: {
+//                 'Authorization': `Bearer ${token}`,
+//                 'Content-Type': 'application/json',
+//             },
+//             body: JSON.stringify({ quotes: updatedQuotes }),
+//         });
+
+//         if (!response.ok) {
+//             const errorData = await response.json();
+//             console.error('Failed to update order and selection:', errorData.message);
+//         }
+//     } catch (error) {
+//         console.error('Error saving order and selection:', error);
+//     }
+// }
 
 //updated edit mode
 
@@ -451,22 +487,20 @@ async function deleteQuote(quoteId) {
 //---------------------------------------Drag-and-Drop Handlers
 
 // Corrected dragStart handler for dragging the entire quoteBox only when clicking the reorderIcon
-function handleDragStart(event) {
-    // Ensure the drag starts ONLY when clicking the reorder icon
-    if (!event.target.classList.contains('reorder-icon')) {
-        event.preventDefault(); // Prevent dragging if not the reorder icon
-        return;
-    }
 
-    // Move the entire quoteBox when dragging
-    draggedItem = event.target.closest('.quote-box'); 
-    event.dataTransfer.effectAllowed = 'move';
-    draggedItem.style.opacity = '0.5'; // Visual feedback
+function handleDragStart(event) {
+    console.log('Drag started on:', event.target); // Logs the element being dragged
+    draggedItem = event.target.closest('.quote-box'); // Ensure the whole quoteBox is dragged
+    if (draggedItem) {
+        draggedItem.style.opacity = '0.5'; // Visual cue
+        //console.log('Dragged item is:', draggedItem.id); // Confirm the correct box
+    }
 }
 
+
 function handleDragOver(event) {
-    event.preventDefault(); // Allow dropping
-    event.dataTransfer.dropEffect = 'move';
+    event.preventDefault(); // Allow drop
+    //console.log('Drag over target:', event.target.closest('.quote-box')?.id || 'none');
 }
 
 // Drag end (reset opacity)
@@ -477,69 +511,32 @@ function handleDragEnd() {
 }
 
 // Updated handleDrop event
+
 async function handleDrop(event) {
     event.preventDefault();
 
-    const targetItem = event.target.closest('.quote-box'); // Get the drop target
+    const targetItem = event.target.closest('.quote-box');
+    // console.log('Drop event triggered on:', targetItem?.id || 'none');
+    // console.log('Dragged item:', draggedItem?.id || 'none');
 
     if (draggedItem && targetItem && draggedItem !== targetItem) {
-        const draggedQuoteId = draggedItem.id.replace('quote-', '');
-        const targetQuoteId = targetItem.id.replace('quote-', '');
+        // Reorder visually
+        quotesList.insertBefore(draggedItem, targetItem.nextSibling);
+        //console.log('Dragged item moved to new position');
 
-        // Determine the dragged and target quote objects
-        const draggedQuote = allQuotes.find(quote => quote._id === draggedQuoteId);
-        const targetQuote = allQuotes.find(quote => quote._id === targetQuoteId);
+        // Save the new order to the backend
+        await saveOrderAndSelectionAfterDrag();
 
-        if (!draggedQuote || !targetQuote) {
-            console.error("Dragged or target quote not found.");
-            return;
-        }
-
-        // Determine if the dragged quote is moving to the selected or non-selected group
-        const isDraggedToSelected = targetQuote.selected;
-
-        // Handle group transitions (non-selected -> selected or vice versa)
-        if (draggedQuote.selected !== isDraggedToSelected) {
-            if (isDraggedToSelected) {
-                // Moving to the selected group
-                const selectedQuotesCount = allQuotes.filter(quote => quote.selected).length;
-                if (selectedQuotesCount >= 21) {
-                    alert("You can only select up to 21 quotes.");
-                    return;
-                }
-                draggedQuote.selected = true;
-            } else {
-                // Moving to the non-selected group
-                draggedQuote.selected = false;
-            }
-        }
-
-        // Reorder quotes within the group based on the drop target
-        const targetIndex = allQuotes.findIndex(quote => quote._id === targetQuoteId);
-        const draggedIndex = allQuotes.findIndex(quote => quote._id === draggedQuoteId);
-
-        // Remove dragged item from its current position
-        allQuotes.splice(draggedIndex, 1);
-
-        // Insert dragged item into the new position
-        allQuotes.splice(targetIndex, 0, draggedQuote);
-
-        // Update positions for all quotes in both groups
-        allQuotes.forEach((quote, index) => {
-            quote.position = index;
-        });
-
-        // Save the new order and selection status to the backend
-        await saveOrderAndSelection();
-
-        // Reload the quotes to reflect changes and keep selections intact
+        // Reload quotes to ensure order is updated
         await loadQuotes();
     }
 
-    // Reset dragged item's opacity and clear reference
-    draggedItem.style.opacity = '1';
-    draggedItem = null;
+    if (draggedItem) {
+        draggedItem.style.opacity = '1'; // Reset opacity
+        draggedItem = null;
+    }
 }
+
 
 
 
