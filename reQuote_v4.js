@@ -225,7 +225,7 @@ app.post('/logout', (req, res) => {
 
 // Updated Add Quote Endpoint
 
-app.post('/quotes', authenticate, async (req, res) => {
+app.post('/quotes', authenticate, async (req, res) => { 
     const { content, author, source } = req.body;
 
     if (!content || !author) {
@@ -240,7 +240,10 @@ app.post('/quotes', authenticate, async (req, res) => {
         const userQuotes = await Quote.find({ user: req.userId });
 
         // Calculate the next available position for the user's non-selected quotes
-        const nextPosition = userQuotes.filter(q => !q.selected).length;
+        //const nextPosition = userQuotes.filter(q => !q.selected).length;
+        const nextPosition = userQuotes.length > 0
+        ? Math.max(...userQuotes.map(q => q.position || 0)) + 1
+        : 0;
 
         // Create a new quote
         const quote = new Quote({
@@ -416,8 +419,32 @@ app.patch('/quotes/:id/selection', authenticate, async (req, res) => {
 
         // Step 3: Update the selected field for the quote
         quote.selected = selected;
+
+        // SORTING
+        if (selected) {
+            // Add the quote to the bottom of the selected group
+            const selectedQuotes = await Quote.find({ user: req.userId, selected: true }).sort({ position: 1 });
+            quote.position = selectedQuotes.length > 0
+                ? Math.max(...selectedQuotes.map(q => q.position)) + 1
+                : 0;
+        } else {
+            // Add the quote to the top of the unselected group
+            const unselectedQuotes = await Quote.find({ user: req.userId, selected: false }).sort({ position: 1 });
+            quote.position = unselectedQuotes.length > 0
+                ? Math.min(...unselectedQuotes.map(q => q.position)) - 1
+                : 0;
+        }
+
         await quote.save();
         console.log(`Quote selection updated. Quote ID: ${quote._id}, Selected: ${quote.selected}`);
+
+        // Reassign positions for all quotes in the same group
+        const allQuotes = await Quote.find({ user: req.userId }).sort({ position: 1 });
+        let currentPosition = 0;
+        for (const q of allQuotes.filter(q => q.selected === selected)) {
+            q.position = currentPosition++;
+            await q.save();
+        }
 
         // Step 4: Update or create the schedule if required
         let schedule = await Schedule.findOne({ user: req.userId });
