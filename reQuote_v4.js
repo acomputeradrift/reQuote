@@ -8,6 +8,10 @@ dotenv.config();
 import { generateAmazonLink } from './utils/amazonLink.js';
 import { truncateQuoteContent } from './utils/truncateQuoteContent.js';
 import { reorderQuotes } from './utils/sortingAlgorithm.js';
+import { updateUserSchedule } from './utils/updateUserSchedule.js';
+import { Quote } from '/var/www/reQuote/models/Quote.js';
+import { User } from '/var/www/reQuote/models/User.js';
+
 
 import express from 'express';
 import mongoose from 'mongoose';
@@ -42,35 +46,35 @@ const transporter = nodemailer.createTransport({
     }
 })();
 
-//----------------------------------------------------------- Schemas and Models
-const userSchema = new mongoose.Schema({
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    confirmed: { type: Boolean, default: false },
-    quotes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Quote' }], // List of user's quotes
-    selectedQuotes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Quote' }] // Array of selected quotes
-});
+// //----------------------------------------------------------- Schemas and Models
+// const userSchema = new mongoose.Schema({
+//     email: { type: String, required: true, unique: true },
+//     password: { type: String, required: true },
+//     confirmed: { type: Boolean, default: false },
+//     quotes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Quote' }], // List of user's quotes
+//     selectedQuotes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Quote' }] // Array of selected quotes
+// });
 
-const quoteSchema = new mongoose.Schema({
-    content: { type: String, required: true },
-    author: { type: String, required: true },
-    source: { type: String, default: 'Unknown' }, // Default value for source
-    sourceLink: { type: String, default: null },  // Amazon link for the book
-    position: { type: Number, default: null },    // Renamed from 'order'
-    selected: { type: Boolean, default: false },  // Indicates if the quote is part of the selected group
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-});
+// const quoteSchema = new mongoose.Schema({
+//     content: { type: String, required: true },
+//     author: { type: String, required: true },
+//     source: { type: String, default: 'Unknown' }, // Default value for source
+//     sourceLink: { type: String, default: null },  // Amazon link for the book
+//     position: { type: Number, default: null },    // Renamed from 'order'
+//     selected: { type: Boolean, default: false },  // Indicates if the quote is part of the selected group
+//     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+// });
 
-const scheduleSchema = new mongoose.Schema({
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    selectedQuotes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Quote', required: true }],
-    nextIndex: { type: Number, default: 0 }, // Tracks the next quote to send
-});
+// const scheduleSchema = new mongoose.Schema({
+//     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+//     selectedQuotes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Quote', required: true }],
+//     nextIndex: { type: Number, default: 0 }, // Tracks the next quote to send
+// });
 
-const User = mongoose.model('User', userSchema);
-const Quote = mongoose.model('Quote', quoteSchema);
-const Schedule = mongoose.model('Schedule', scheduleSchema);
-export { Quote };
+// const User = mongoose.model('User', userSchema);
+// const Quote = mongoose.model('Quote', quoteSchema);
+// const Schedule = mongoose.model('Schedule', scheduleSchema);
+// export { Quote };
 
 //------------------------------------------------------ Initialize the Express app
 const app = express();
@@ -344,163 +348,44 @@ app.delete('/quotes/:id', authenticate, async (req, res) => {
 
 app.patch('/quotes/:id/selection', authenticate, async (req, res) => {
     const { id } = req.params;
-    const { selected } = req.body;
+    const { selected } = req.body; // this is simply a true/false
 
     if (typeof selected !== 'boolean') {
         return res.status(400).json({ message: 'Invalid selection value. Must be true or false.' });
     }
 
     try {
-        // Step 1: Find the quote by ID and ensure it belongs to the authenticated user
+        // Step 1: Find the quote by ID in the database and ensure it belongs to the authenticated user
         const quote = await Quote.findOne({ _id: id, user: req.userId }).populate('user', 'email');
         if (!quote) {
             return res.status(404).json({ message: 'Quote not found' });
         }
         console.log(`Quote found: ${quote._id}, Current Selected State: ${quote.selected}`);
 
-        // Step 2: Update the selected field for the quote
-        quote.selected = selected;
-        console.log(`Quote is being ${selected ? 'selected' : 'deselected'}.`);
-
+        // Step 2: If selecting, test the 21-quote limit
         if (selected) {
-            console.log('Quote is being selected.');
-
-            // Ensure the 21-quote limit is not exceeded
+            console.log('Quote is being selected. Testing 21-quote limit.');
             const selectedQuotesCount = await Quote.countDocuments({ user: req.userId, selected: true });
-            
             console.log(`Currently selected quotes count: ${selectedQuotesCount}`);
             if (selectedQuotesCount >= 21) {
                 return res.status(400).json({ message: 'You can only select up to 21 quotes.' });
             }
-
-            // Assign the quote to the bottom of the selected group
-           // const selectedQuotes = await Quote.find({ user: req.userId, selected: true }).sort({ position: 1 });
-           const selectedQuotes = await Quote.find({ user: req.userId, selected: true });
-           console.log('Selected quotes before assigning position:', selectedQuotes.map(q => ({
-                id: q._id,
-                position: q.position
-            })));
-
-            quote.position = selectedQuotes.length > 0
-                ? Math.max(...selectedQuotes.map(q => q.position)) + 1
-                : 0;
-
-            console.log(`Assigned position to selected quote: ${quote.position}`);
-
-
-        } else {
-            // Assign the quote to the top of the unselected group
-            console.log(`Quote is being deselected: ${quote._id}`);
-
-            const unselectedQuotes = await Quote.find({ user: req.userId, selected: false }).sort({ position: 1 });
-            console.log('Unselected quotes before position adjustment:', unselectedQuotes.map(q => ({ id: q._id, position: q.position })));
-
-            // Set the deselected quote's position to the lowest available position (top of the unselected group)
-            quote.position = unselectedQuotes.length > 0
-                ? Math.min(...unselectedQuotes.map(q => q.position)) - 1
-                : 0;
-            console.log(`Assigned position to deselected quote: ${quote._id} -> ${quote.position}`);
-
-            await quote.save();
-
-            // Log the final state of the database
-            const updatedUnselectedQuotes = await Quote.find({ user: req.userId, selected: false }).sort({ position: 1 });
-            console.log('Unselected quotes after adjustment:', updatedUnselectedQuotes.map(q => ({ id: q._id, position: q.position })));
         }
 
-        // } else {
-        //     // Assign the quote to the bottom of the unselected group
-        //     console.log(`Quote is being deselected: ${quote._id}`);
-
-        //     const unselectedQuotes = await Quote.find({ user: req.userId, selected: false }).sort({ position: 1 });
-        //     console.log('Unselected quotes before position adjustment:', unselectedQuotes.map(q => ({ id: q._id, position: q.position })));
-
-        //     // Set the deselected quote's position to the highest available position (bottom of the unselected group)
-        //     quote.position = unselectedQuotes.length > 0
-        //         ? Math.max(...unselectedQuotes.map(q => q.position)) + 1
-        //         : 0;
-        //     console.log(`Assigned position to deselected quote: ${quote._id} -> ${quote.position}`);
-
-        //     await quote.save();
-
-        //     // Log the final state of the database
-        //     const updatedUnselectedQuotes = await Quote.find({ user: req.userId, selected: false }).sort({ position: 1 });
-        //     console.log('Unselected quotes after adjustment:', updatedUnselectedQuotes.map(q => ({ id: q._id, position: q.position })));
-        // }
-
-        // } else {
-        //     //console.log('Quote is being deselected.');
-        //     console.log('Current quote being deselected:', { id: quote._id, position: quote.position });
-
-        //     // Assign the quote to the top of the unselected group
-        //     const unselectedQuotes = await Quote.find({ user: req.userId, selected: false }).sort({ position: 1 });
-        //     console.log('Unselected quotes before position adjustment:', unselectedQuotes.map(q => ({
-        //         id: q._id,
-        //         position: q.position
-        //     })));
-
-        //     quote.position = 0;
-
-        //     // Shift positions of all other unselected quotes
-        //     for (const q of unselectedQuotes) {
-        //         console.log(`Shifting position for quote ID: ${q._id} from ${q.position} to ${q.position + 1}`);
-        //         q.position += 1;
-        //         await q.save();
-        //         console.log(`Quote ${q._id} saved with new position: ${q.position}`);
-
-        //         //console.log(`Shifting position for quote ID: ${q._id} from ${q.position} to ${q.position + 1}`);
-
-        //         //console.log(`Shifted position of quote ID: ${q._id} to ${q.position}`);
-        //     }
-        // }
-        //console.log('Unselected quotes after position adjustment:', unselectedQuotes.map(q => ({ id: q._id, position: q.position })));
-
-        await quote.save();
-        console.log(`Quote ${quote._id} saved with position: ${quote.position}`);
-
-        // Reorder all quotes
-        const allQuotes = await Quote.find({ user: req.userId });
-        const reorderedQuotes = reorderQuotes(allQuotes);
-
-        // Save updated positions to the database
-        for (const q of reorderedQuotes) {
-            await Quote.findByIdAndUpdate(q._id, { position: q.position });
-        }
-
-        const updatedQuotes = await Quote.find({ user: req.userId }).sort({ position: 1 });
-        console.log('Database state after reordering:', updatedQuotes.map(q => ({
-            id: q._id,
-            position: q.position,
-            selected: q.selected,
-        })));
-
-        // Log the action
+        // Step 3: Update the quote's `selected` field
+        quote.selected = selected;
         const truncatedContent = truncateQuoteContent(quote.content);
         console.log(
             `${quote.user.email} ${quote.selected ? 'selected' : 'deselected'} the quote "${truncatedContent}" for scheduled email.`
         );
 
-        //------------------------------------------------- Step 3: Update the schedule
-        let schedule = await Schedule.findOne({ user: req.userId });
-        if (!schedule) {
-            schedule = new Schedule({ user: req.userId, selectedQuotes: [] });
-        }
+        // Save the updated quote to the database
+        await quote.save();
+        console.log(`Quote and updated selection saved to the database.`);
+        // Call the updateUserSchedule function
+        await updateUserSchedule(req.userId, selected, quote._id);
 
-        if (selected) {
-            schedule.selectedQuotes.push(quote._id);
-        } else {
-            schedule.selectedQuotes = schedule.selectedQuotes.filter((qid) => qid.toString() !== quote._id.toString());
-        }
-
-        schedule.selectedQuotes = schedule.selectedQuotes.slice(0, 21); // Ensure it doesn't exceed 21
-        await schedule.save();
-
-        console.log(
-            `${quote.user.email} now has ${schedule.selectedQuotes.length} quotes scheduled for email.`
-        );
-
-        // Step 4: Respond with success
-        console.log('Final response being sent to frontend.');
+        // Respond to the client
         res.status(200).json({ message: 'Quote selection updated successfully.', quote });
 
     } catch (error) {
@@ -508,6 +393,53 @@ app.patch('/quotes/:id/selection', authenticate, async (req, res) => {
         res.status(500).json({ message: 'Failed to update quote selection.' });
     }
 });
+
+
+// app.patch('/quotes/:id/selection', authenticate, async (req, res) => {
+//     const { id } = req.params;
+//     const { selected } = req.body; //this is simply a true/false
+
+//     if (typeof selected !== 'boolean') {
+//         return res.status(400).json({ message: 'Invalid selection value. Must be true or false.' });
+//     }
+
+//     try {
+//         // Step 1: Find the quote by ID in the database and ensure it belongs to the authenticated user
+//         const quote = await Quote.findOne({ _id: id, user: req.userId }).populate('user', 'email', 'content');
+//         if (!quote) {
+//             return res.status(404).json({ message: 'Quote not found' });
+//         }
+//         console.log(`Quote found: ${quote._id}, Current Selected State: ${quote.selected}`);
+
+//         if (quote.selected) {
+//             console.log('Quote is being selected, testing 21 quote limit');
+//             // Get the current number of selected quotes
+//             const oldSelectedQuotesCount = await Quote.countDocuments({ user: req.userId, selected: true });
+//             console.log(`Currently selected quotes count: ${oldSelectedQuotesCount}`);
+//              // Add the one I am about trying to select
+//              const newSelectedQuotesCount = oldSelectedQuotesCount + 1;
+//             // Test to see if adding 1 to the count would hit 22
+//             if (newSelectedQuotesCount >= 21) {
+//                 return res.status(400).json({ message: 'You can only select up to 21 quotes.' });
+//             }
+//         }
+
+//         // Step 2: Update the quote we just pulled from the database to the value passed from updateQuoteSelectionInBackend
+//         quote.selected = selected;
+//         const truncatedContent = truncateQuoteContent(quote.content);
+//         console.log(
+//             `${quote.user.email} ${quote.selected ? 'selected' : 'deselected'} the quote "${truncatedContent}" for scheduled email.`
+//         );
+//         //once we have updated the quote object, save it to the database.
+//         await quote.save();
+//         // Log the action
+//         console.log(`Quote and updated selection saved to database`);
+
+//     } catch (error) {
+//         console.error('Error updating quote selection:', error);
+//         res.status(500).json({ message: 'Failed to update quote selection.' });
+//     }
+// });
 
 
 // app.patch('/quotes/:id/selection', authenticate, async (req, res) => {
@@ -904,3 +836,4 @@ cron.schedule('0 6 * * *', async () => {
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });
+``

@@ -263,7 +263,7 @@ function renderQuoteBox(quote) {
         emailButton.innerHTML = '&#9993;';
         emailButton.title = 'Add or remove this quote from your email schedule';
     
-          // Apply the `selected` class based on the quote's state
+          // Apply the `selected` class based on the quote's state when rendered
           if (quote.selected) {
             emailButton.classList.add('selected');
         } else {
@@ -271,9 +271,9 @@ function renderQuoteBox(quote) {
         }
         
         emailButton.addEventListener('click', async (event) => {
-            const isCurrentlySelected = quote.selected;
+            //const isCurrentlySelected = quote.selected;
         
-            quote.selected = !isCurrentlySelected;
+           // quote.selected = !isCurrentlySelected;
         
             console.log('Frontend sending to backend:', {
                 id: quote._id,
