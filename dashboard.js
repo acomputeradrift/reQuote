@@ -97,18 +97,23 @@ export async function loadQuotes() {
             console.log("loadQuotes got an OK response from backend");
           
             const quotes = await response.json();
-        
-            // Store quotes globally
-            allQuotes = quotes;
-            console.log('allQuotes:', allQuotes);
             console.log('Quotes received from backend:', quotes.map(q => ({
                 id: q._id,
                 position: q.position,
                 selected: q.selected
             })));
+            // Store quotes globally
+            allQuotes = quotes;
+            console.log('Quotes stored in local array:', allQuotes.map(q => ({
+                id: q._id,
+                position: q.position,
+                selected: q.selected
+            })));
+            //console.log('allQuotes:', allQuotes);
+         
             // Clear and render quotes
             quotesList.innerHTML = '';
-        
+            console.log('Sending contents of local array to renderQuotes')
             // Render quotes directly as returned by the backend
             allQuotes.forEach((quote) => {
                 renderQuoteBox(quote);
@@ -271,11 +276,12 @@ function renderQuoteBox(quote) {
         }
         
         emailButton.addEventListener('click', async (event) => {
-            //const isCurrentlySelected = quote.selected;
+
+            //Toggle between the two states
+            const isCurrentlySelected = quote.selected;
+            quote.selected = !isCurrentlySelected;
         
-           // quote.selected = !isCurrentlySelected;
-        
-            console.log('Frontend sending to backend:', {
+            console.log('Frontend sending quote and selection status to backend (renderQuoteBox):', {
                 id: quote._id,
                 selected: quote.selected,
             });
@@ -326,7 +332,16 @@ async function updateQuoteSelectionInBackend(id, selected) {
 
         if (response.ok) {
             const updatedQuote = await response.json();
-            console.log('Backend updated quote:', updatedQuote);
+            // console.log('Frontend received quote and selection status from backend (updateQuoteSelectionInBackend):', {
+            //     id: updatedQuote._id,
+            //     selected: updatedQuote.selected,
+            // });
+            console.log('Frontend received quote and selection status from backend (updateQuoteSelectionInBackend):', {
+                id: updatedQuote.quote._id,
+                selected: updatedQuote.quote.selected,
+            });
+
+            //console.log('Backend updated quote:', updatedQuote);
             const action = selected ? 'added to' : 'removed from';
             showNotification(`Quote ${action} the email list`, 'success');
         } else {
