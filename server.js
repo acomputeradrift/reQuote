@@ -45,37 +45,7 @@ const transporter = nodemailer.createTransport({
         process.exit(1);
     }
 })();
-
-// //----------------------------------------------------------- Schemas and Models
-// const userSchema = new mongoose.Schema({
-//     email: { type: String, required: true, unique: true },
-//     password: { type: String, required: true },
-//     confirmed: { type: Boolean, default: false },
-//     quotes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Quote' }], // List of user's quotes
-//     selectedQuotes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Quote' }] // Array of selected quotes
-// });
-
-// const quoteSchema = new mongoose.Schema({
-//     content: { type: String, required: true },
-//     author: { type: String, required: true },
-//     source: { type: String, default: 'Unknown' }, // Default value for source
-//     sourceLink: { type: String, default: null },  // Amazon link for the book
-//     position: { type: Number, default: null },    // Renamed from 'order'
-//     selected: { type: Boolean, default: false },  // Indicates if the quote is part of the selected group
-//     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-// });
-
-// const scheduleSchema = new mongoose.Schema({
-//     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-//     selectedQuotes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Quote', required: true }],
-//     nextIndex: { type: Number, default: 0 }, // Tracks the next quote to send
-// });
-
-// const User = mongoose.model('User', userSchema);
-// const Quote = mongoose.model('Quote', quoteSchema);
-// const Schedule = mongoose.model('Schedule', scheduleSchema);
-// export { Quote };
-
+ 
 //------------------------------------------------------ Initialize the Express app
 const app = express();
 app.use(express.json());
@@ -233,7 +203,7 @@ app.post('/quotes', authenticate, async (req, res) => {
 //Get Quotes by User
 app.get('/quotes', authenticate, async (req, res) => {
     try {
-        const quotes = await Quote.find({ user: req.userId }).sort({ order: 1 });
+        const quotes = await Quote.find({ user: req.userId }).sort({ position: 1 });
         res.status(200).json(quotes);
     } catch (error) {
         res.status(500).json({ message: 'Error retrieving quotes (backend)', error });
@@ -297,7 +267,7 @@ app.put('/quotes/:id', async (req, res) => {
             return res.status(404).json({ error: 'Quote not found.' });
         }
         console.log(`${updatedQuote.user.email} edited and saved quote ${updatedQuote._id} successfully`);
-        console.log("Updated quote:", updatedQuote); // Log the updated quote
+        //console.log("Updated quote:", updatedQuote); // Log the updated quote
         // Send the updated quote as the response 
         res.status(200).json(updatedQuote);
     } catch (error) {
@@ -369,7 +339,7 @@ app.patch('/quotes/:id/selection', authenticate, async (req, res) => {
 
         // Step 2: If selecting, test the 21-quote limit
         if (selected) {
-            console.log('Request received to change selection state to true.')
+            console.log('Request received to change quote selection state to true.')
             const selectedQuotesCount = await Quote.countDocuments({ user: req.userId, selected: true });
             console.log(`This user currently has ${selectedQuotesCount} selected quotes.`);
             if (selectedQuotesCount >= 21) {
@@ -380,14 +350,14 @@ app.patch('/quotes/:id/selection', authenticate, async (req, res) => {
                 console.log('Approved.')
             }
         } else {
-            console.log('Request received to change selection state to false.')
+            console.log('Changing quote selection state to false.')
         }
         // Step 3: Update the quote's `selected` field
         currentQuote.selected = selected;
     
         // Save the updated quote to the database
         await currentQuote.save();
-        console.log(`Updated quote selection saved to the database.`);
+        //console.log(`Updated quote selection saved to the database.`);
         const updatedQuote = await Quote.findOne({ _id: id, user: req.userId }).populate('user', 'email');
         if (!updatedQuote) {
             return res.status(404).json({ message: 'Quote not found' });
@@ -396,7 +366,7 @@ app.patch('/quotes/:id/selection', authenticate, async (req, res) => {
         //Log it
         const truncatedContent = truncateQuoteContent(currentQuote.content);
         console.log(
-            `${currentQuote.user.email} ${currentQuote.selected ? 'selected' : 'deselected'} the quote "${truncatedContent}" for scheduled email.`
+            `${currentQuote.user.email} has successfully ${currentQuote.selected ? 'selected' : 'deselected'} the quote "${truncatedContent}" for scheduled email.`
         );
         // Call the updateUserSchedule function
         await updateUserSchedule(updatedQuote.user._id, updatedQuote.user.email,  updatedQuote.selected, updatedQuote._id);
