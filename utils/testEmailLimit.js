@@ -1,11 +1,13 @@
-import { Quote } from '/var/www/reQuote/models/Quote.js';
+//import { Quote } from '/var/www/reQuote/models/Quote.js';
 
-export async function testEmailLimit(quote) { 
+export async function testEmailLimit(allQuotes) { 
     // ✅ Extract `userId` from the `quote` object
-    const userId = quote.user; 
+    //const userId = quote.user; 
 
     // ✅ Ensure the function is async so `await` works
-    const selectedQuotesCount = await Quote.countDocuments({ user: userId, selected: true });
+    //??const selectedQuotesCount = await Quote.countDocuments({ user: userId, selected: true });
+    const selectedQuotesCount = allQuotes.filter(quote => quote.selected).length;
+
 
     console.log(`This user currently has ${selectedQuotesCount} selected quotes.`);
 

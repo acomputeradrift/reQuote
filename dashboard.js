@@ -241,7 +241,7 @@ function renderQuoteBox(quote) {
             const isCurrentlySelected = quote.selected;
             //!!
             if (!isCurrentlySelected) {  // Only check the limit when selecting
-                const result = await testEmailLimit(quote);
+                const result = await testEmailLimit(allQuotes); //!!send global allQuotes
                 if (!result.approved) {
                     console.log(result.message);
                     return; // Stop selection if limit is reached
