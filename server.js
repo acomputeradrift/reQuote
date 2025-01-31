@@ -9,9 +9,10 @@ import { generateAmazonLink } from './utils/amazonLink.js';
 import { truncateQuoteContent } from './utils/truncateQuoteContent.js';
 import { reorderUserQuotes } from './utils/sortingAlgorithm.js';
 import { updateUserSchedule } from './utils/updateUserSchedule.js';
+import { testEmailLimit } from './utils/testEmailLimit.js';
+
 import { Quote } from '/var/www/reQuote/models/Quote.js';
 import { User } from '/var/www/reQuote/models/User.js';
-
 
 import express from 'express';
 import mongoose from 'mongoose';
@@ -316,11 +317,13 @@ app.delete('/quotes/:id', authenticate, async (req, res) => {
     }
 });
 
+//This won't be used
 app.patch('/quotes/:id/selection', authenticate, async (req, res) => {
 
     //---------------------------3 queries to the database 
     // --------(find the Quote / get current state, count selected Quotes, get updated state)
 
+    //!! Really all we have to do here is push the allQuotes array to the backend as is
     const { id } = req.params;
     const { selected } = req.body; // this is simply a true/false
 
@@ -340,15 +343,20 @@ app.patch('/quotes/:id/selection', authenticate, async (req, res) => {
         // Step 2: If selecting, test the 21-quote limit
         if (selected) {
             console.log('Request received to change quote selection state to true.')
-            const selectedQuotesCount = await Quote.countDocuments({ user: req.userId, selected: true });
-            console.log(`This user currently has ${selectedQuotesCount} selected quotes.`);
-            if (selectedQuotesCount >= 21) {
-                console.log('NOT Approved.');
-                return res.status(400).json({ message: 'You can only select up to 21 quotes.' });
+            const result = await testEmailLimit(currentQuote);
+            if (!result.approved) {
+                console.log(result.message);
             }
-             else {
-                console.log('Approved.')
-            }
+
+            // const selectedQuotesCount = await Quote.countDocuments({ user: req.userId, selected: true });
+            // console.log(`This user currently has ${selectedQuotesCount} selected quotes.`);
+            // if (selectedQuotesCount >= 21) {
+            //     console.log('NOT Approved.');
+            //     return res.status(400).json({ message: 'You can only select up to 21 quotes.' });
+            // }
+            //  else {
+            //     console.log('Approved.')
+            // }
         } else {
             console.log('Changing quote selection state to false.')
         }
@@ -390,26 +398,68 @@ app.patch('/quotes/:id/selection', authenticate, async (req, res) => {
     }
 });
 
-app.post('/quotes/update-order-selection', authenticate, async (req, res) => {
-    const { quotes } = req.body;
-
-    console.log('Received updated order from frontend:', quotes);
-
-    if (!Array.isArray(quotes)) {
-        return res.status(400).json({ message: 'Invalid input data' });
-    }
-
+//!!
+app.post('/quotes/update-order-and-selection', async (req, res) => {
     try {
-        for (const { id, position, selected } of quotes) {
-            await Quote.findByIdAndUpdate(id, { position, selected });
+        const { allQuotes } = req.body;
+
+        if (!allQuotes || !Array.isArray(allQuotes)) {
+            return res.status(400).json({ message: 'Invalid request format' });
         }
-        console.log('Quotes updated successfully');
-        res.status(200).json({ message: 'Order and selection updated successfully' });
+
+        console.log(`Received ${allQuotes.length} quotes for bulk update.`);
+
+        // Extract userId from the first quote (assuming all quotes belong to the same user)
+        const userId = allQuotes[0]?.user;
+        if (!userId) {
+            return res.status(400).json({ message: 'User ID missing from request' });
+        }
+
+        // Prepare bulk update operations
+        const bulkUpdates = allQuotes.map(quote => ({
+            updateOne: {
+                filter: { _id: quote._id },
+                update: { $set: { position: quote.position, selected: quote.selected } }
+            }
+        }));
+
+        // Perform bulk update
+        if (bulkUpdates.length > 0) {
+            await Quote.bulkWrite(bulkUpdates);
+            console.log(`✅ Successfully updated ${bulkUpdates.length} quotes for user ${userId}.`);
+        }
+
+        // Call sorting function to reorder quotes
+        await reorderUserQuotes(userId);
+
+        return res.status(200).json({ message: 'Quotes updated and reordered successfully.' });
+
     } catch (error) {
-        console.error('Error updating order and selection:', error);
-        res.status(500).json({ message: 'Failed to update order and selection' });
+        console.error('❌ Error updating quotes:', error);
+        return res.status(500).json({ message: 'Internal server error' });
     }
 });
+
+// app.post('/quotes/update-order-selection', authenticate, async (req, res) => {
+//     const { quotes } = req.body;
+
+//     console.log('Received updated order from frontend:', quotes);
+
+//     if (!Array.isArray(quotes)) {
+//         return res.status(400).json({ message: 'Invalid input data' });
+//     }
+
+//     try {
+//         for (const { id, position, selected } of quotes) {
+//             await Quote.findByIdAndUpdate(id, { position, selected });
+//         }
+//         console.log('Quotes updated successfully');
+//         res.status(200).json({ message: 'Order and selection updated successfully' });
+//     } catch (error) {
+//         console.error('Error updating order and selection:', error);
+//         res.status(500).json({ message: 'Failed to update order and selection' });
+//     }
+// });
 
 //Search Quotes by Other Users
 app.get('/quotes/search', authenticate, async (req, res) => {

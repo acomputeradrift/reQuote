@@ -1,5 +1,6 @@
 import { getToken, showNotification, checkTokenExpiration, logout } from './common.js';
 import { generateAmazonLink } from './utils/amazonLink.js';
+import { testEmailLimit } from './utils/testEmailLimit.js';
 
 // Ensure token is declared properly
 const token = getToken(); 
@@ -32,8 +33,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Fetch selected quotes and load quotes
     try {
-        //await fetchSelectedQuotes();
+        //!! change this to loadQuotesFromDB();
+        //!! this pulls right from the DB rather than refreshQuotes();
+        //!! which will pull from the global array allQuotes
         await loadQuotes();
+
     } catch (error) {
         console.error("Error during dashboard initialization:", error);
         alert("Failed to load quotes. Please try again.");
@@ -80,8 +84,6 @@ if (addQuoteForm) {
     });
 }
 
-// ✅ Safe Loading Quotes Function
-
 // Updated loadQuotes function
 export async function loadQuotes() {
     console.log("loadQuotes queried the backend from dashboard.js");
@@ -123,49 +125,6 @@ export async function loadQuotes() {
             console.error('Failed to load quotes');
         }
         
-
-        // if (response.ok) {
-        //     console.log("loadQuotes got an OK response from backend");
-        //     const quotes = await response.json();
-
-        //     // Store quotes globally
-        //     allQuotes = quotes;
-
-        //     // Separate selected and non-selected quotes
-        //     //const selectedQuotes = quotes.filter(quote => quote.selected);
-        //     const selectedQuotes = allQuotes.filter(q => q.selected);
-
-        //     console.log('allQuotes:', allQuotes);
-        //     const nonSelectedQuotes = allQuotes
-        //     .filter(q => !q.selected)
-        //     .sort((a, b) => a.position - b.position); // Sort by position
-
-        //     console.log('nonSelectedQuotes:', nonSelectedQuotes);
-        //     console.log('Positions of nonSelectedQuotes:', nonSelectedQuotes.map(q => q.position));
-
-
-        //     //const nonSelectedQuotes = quotes.filter(quote => !quote.selected);
-
-        //     // Sort each group by position
-        //     selectedQuotes.sort((a, b) => a.position - b.position);
-        //     nonSelectedQuotes.sort((a, b) => a.position - b.position);
-
-        //     // Clear and render quotes
-        //     quotesList.innerHTML = '';
-
-        //     // Render selected quotes first
-        //     selectedQuotes.forEach((quote) => {
-        //         renderQuoteBox(quote);
-        //     });
-
-        //     // Render non-selected quotes below
-        //     nonSelectedQuotes.forEach((quote) => {
-        //         renderQuoteBox(quote);
-        //     });
-        // } else {
-        //     console.log("loadQuotes DID NOT get an OK response from backend");
-        //     console.error('Failed to load quotes');
-        // }
     } catch (error) {
         console.log("loadQuotes failed completely");
         console.error('Error loading quotes:', error);
@@ -277,17 +236,39 @@ function renderQuoteBox(quote) {
         
         emailButton.addEventListener('click', async (event) => {
 
+            //!! We will have to test the 21 limit on the front end
             //Toggle between the two states
             const isCurrentlySelected = quote.selected;
+            //!!
+            if (!isCurrentlySelected) {  // Only check the limit when selecting
+                const result = await testEmailLimit(quote);
+                if (!result.approved) {
+                    console.log(result.message);
+                    return; // Stop selection if limit is reached
+                }
+            }
+            //!!
             quote.selected = !isCurrentlySelected;
-        
+
+            //!! update the allQuotes here with quoteID and selection, this will only affect when the email
+            allQuotes = allQuotes.map(q => 
+                q._id === quote._id ? { ...q, selected: quote.selected } : q
+            );
+            //!! icon is clicked not when rendered otherwise
+            
             console.log('Frontend sending quote and selection status to backend (renderQuoteBox):', {
                 id: quote._id,
                 selected: quote.selected,
             });
-        
+            
+            //!! Push the whole array to the backend
+            await updateQuoteOrderAndSelectionInBackend(allQuotes); 
+            //!!
+
             // Send updated selection state to the backend
-            await updateQuoteSelectionInBackend(quote._id, quote.selected);
+            //??
+            //await updateQuoteSelectionInBackend(quote._id, quote.selected);
+            //??
         
             // Reload the updated quotes from the backend
             await loadQuotes();
@@ -319,6 +300,36 @@ function renderQuoteBox(quote) {
         quotesList.appendChild(quoteBox);        
 }
 
+//!!
+async function updateQuoteOrderAndSelectionInBackend(updatedQuotes) {
+    console.log("📤 Sending updated quotes to backend...");
+
+    try {
+        const response = await fetch('/quotes/update-order-and-selection', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,  // Ensure authentication if needed
+            },
+            body: JSON.stringify({ allQuotes: updatedQuotes }) // Send the passed quotes array
+        });
+
+        if (response.ok) {
+            console.log("✅ Successfully updated quotes in backend.");
+            // Refresh quotes from the database to ensure accuracy
+            await loadQuotes();
+        } else {
+            console.error("❌ Failed to update quotes in backend.");
+            const errorData = await response.json();
+            console.error("Server response:", errorData);
+        }
+
+    } catch (error) {
+        console.error("❌ Error updating quote order and selection:", error);
+    }
+}
+
+//This will not be used
 async function updateQuoteSelectionInBackend(id, selected) {
     try {
         const response = await fetch(`/quotes/${id}/selection`, {
@@ -391,7 +402,6 @@ async function saveOrderAndSelectionAfterDrag() {
         console.error('Error saving order and selection:', error);
     }
 }
-
 
 // async function saveOrderAndSelectionAfterDrag() {
 //     try {
