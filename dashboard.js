@@ -86,7 +86,7 @@ if (addQuoteForm) {
 
 // Updated loadQuotes function
 export async function loadQuotes() {
-    console.log("loadQuotes queried the backend from dashboard.js");
+    console.log("Quotes requested from the database (loadQuotes).");
     try {
         const response = await fetch('/quotes', {
             method: 'GET',
@@ -96,17 +96,15 @@ export async function loadQuotes() {
         });
 
         if (response.ok) {
-            console.log("loadQuotes got an OK response from backend");
-          
             const quotes = await response.json();
-            console.log('Quotes received from backend:', quotes.map(q => ({
+            console.log('Quotes received from the database (loadQuotes):', quotes.map(q => ({
                 id: q._id,
                 position: q.position,
                 selected: q.selected
             })));
             // Store quotes globally
             allQuotes = quotes;
-            console.log('Quotes stored in local array:', allQuotes.map(q => ({
+            console.log('Quotes passed to global allQuotes array (loadQuotes):', allQuotes.map(q => ({
                 id: q._id,
                 position: q.position,
                 selected: q.selected
@@ -115,7 +113,7 @@ export async function loadQuotes() {
          
             // Clear and render quotes
             quotesList.innerHTML = '';
-            console.log('Sending contents of local array to renderQuotes')
+            console.log('Sending contents of allQuotes to renderQuoteBox (loadQuotes)')
             // Render quotes directly as returned by the backend
             allQuotes.forEach((quote) => {
                 renderQuoteBox(quote);
@@ -137,8 +135,7 @@ function renderQuoteBox(quote) {
         console.error("Invalid or incomplete quote data:", quote);
         return; // Prevent rendering
     }
-        console.log("renderQuoteBox ran in dashboard.js");
-        //console.log("Rendering quote with ID:", quote._id);
+        //console.log("Running renderQuoteBox.");
 
         const quoteBox = document.createElement('div');
         quoteBox.className = 'quote-box';
@@ -256,7 +253,7 @@ function renderQuoteBox(quote) {
             );
             //!! icon is clicked not when rendered otherwise
             
-            console.log('Frontend sending quote and selection status to backend (renderQuoteBox):', {
+            console.log('Quote selection status modified:', {
                 id: quote._id,
                 selected: quote.selected,
             });
@@ -271,7 +268,7 @@ function renderQuoteBox(quote) {
             //??
         
             // Reload the updated quotes from the backend
-            await loadQuotes();
+           // await loadQuotes();
         
             event.stopPropagation();
         });
@@ -284,25 +281,26 @@ function renderQuoteBox(quote) {
         quoteBox.appendChild(leftButtonContainer);
         quoteBox.appendChild(contentContainer);
         quoteBox.appendChild(rightButtonContainer);
-
-        //console.log("Final re-rendered quoteBox content:", quoteBox.innerHTML);
+        quoteBox.setAttribute('draggable', true);
 
         // Allow dragging only when clicking the icon but move the whole box
         reorderIcon.setAttribute('draggable', true); 
         reorderIcon.addEventListener('dragstart', handleDragStart);
         reorderIcon.addEventListener('dragend', handleDragEnd);
 
+        
         // Main drag events for the quote box
         quoteBox.addEventListener('dragover', handleDragOver);
         quoteBox.addEventListener('drop', handleDrop);
 
         // Add the quote box to the quotes list
-        quotesList.appendChild(quoteBox);        
+        quotesList.appendChild(quoteBox); 
+        //console.log('User quote successfully rendered.')       
 }
 
 //!!
 async function updateQuoteOrderAndSelectionInBackend(updatedQuotes) {
-    console.log("📤 Sending updated quotes to backend...");
+    console.log("Sending quote changes to backend for sorting and saving.");
 
     try {
         const response = await fetch('/quotes/update-order-and-selection', {
@@ -315,7 +313,7 @@ async function updateQuoteOrderAndSelectionInBackend(updatedQuotes) {
         });
 
         if (response.ok) {
-            console.log("✅ Successfully updated quotes in backend.");
+            console.log("Quotes successfully sorted and saved in the database.");
             // Refresh quotes from the database to ensure accuracy
             await loadQuotes();
         } else {
@@ -330,78 +328,78 @@ async function updateQuoteOrderAndSelectionInBackend(updatedQuotes) {
 }
 
 //This will not be used
-async function updateQuoteSelectionInBackend(id, selected) {
-    try {
-        const response = await fetch(`/quotes/${id}/selection`, {
-            method: 'PATCH',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ selected }),
-        });
+// async function updateQuoteSelectionInBackend(id, selected) {
+//     try {
+//         const response = await fetch(`/quotes/${id}/selection`, {
+//             method: 'PATCH',
+//             headers: {
+//                 'Authorization': `Bearer ${token}`,
+//                 'Content-Type': 'application/json',
+//             },
+//             body: JSON.stringify({ selected }),
+//         });
 
-        if (response.ok) {
-            const updatedQuote = await response.json();
-            // console.log('Frontend received quote and selection status from backend (updateQuoteSelectionInBackend):', {
-            //     id: updatedQuote._id,
-            //     selected: updatedQuote.selected,
-            // });
-            console.log('Frontend received quote and selection status from backend (updateQuoteSelectionInBackend):', {
-                id: updatedQuote.quote._id,
-                selected: updatedQuote.quote.selected,
-            });
+//         if (response.ok) {
+//             const updatedQuote = await response.json();
+//             // console.log('Frontend received quote and selection status from backend (updateQuoteSelectionInBackend):', {
+//             //     id: updatedQuote._id,
+//             //     selected: updatedQuote.selected,
+//             // });
+//             console.log('Frontend received quote and selection status from backend (updateQuoteSelectionInBackend):', {
+//                 id: updatedQuote.quote._id,
+//                 selected: updatedQuote.quote.selected,
+//             });
 
-            //console.log('Backend updated quote:', updatedQuote);
-            const action = selected ? 'added to' : 'removed from';
-            showNotification(`Quote ${action} the email list`, 'success');
-        } else {
-            const error = await response.json();
-            if (error.message === 'You can select up to 21 quotes only.') {
-                alert('You can only select up to 21 quotes. Please deselect a quote before selecting another.');
-            } else {
-                console.error('Failed to update quote:', error.message);
-            }
-        }
-    } catch (error) {
-        console.error('Error updating quote:', error);
-    }
-}
+//             //console.log('Backend updated quote:', updatedQuote);
+//             const action = selected ? 'added to' : 'removed from';
+//             showNotification(`Quote ${action} the email list`, 'success');
+//         } else {
+//             const error = await response.json();
+//             if (error.message === 'You can select up to 21 quotes only.') {
+//                 alert('You can only select up to 21 quotes. Please deselect a quote before selecting another.');
+//             } else {
+//                 console.error('Failed to update quote:', error.message);
+//             }
+//         }
+//     } catch (error) {
+//         console.error('Error updating quote:', error);
+//     }
+// }
 
 //Update backend after drag
 
-async function saveOrderAndSelectionAfterDrag() {
-    const newOrder = allQuotes.map((q, index) => ({
-        id: q._id,
-        position: index,
-        selected: q.selected,
-    }));
+// async function saveOrderAndSelectionAfterDrag() {
+//     const newOrder = allQuotes.map((q, index) => ({
+//         id: q._id,
+//         position: index,
+//         selected: q.selected,
+//     }));
 
-    console.log('Sending updated order to backend:', newOrder);
+//     console.log('Sending updated order to backend:', newOrder);
 
-    try {
-        const response = await fetch('/quotes/update-order-selection', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ quotes: newOrder }),
-        });
+//     try {
+//         const response = await fetch('/quotes/update-order-selection', {
+//             method: 'POST',
+//             headers: {
+//                 'Authorization': `Bearer ${token}`,
+//                 'Content-Type': 'application/json',
+//             },
+//             body: JSON.stringify({ quotes: newOrder }),
+//         });
 
-        const rawText = await response.text();
-        console.log('Raw backend response:', rawText);
+//         const rawText = await response.text();
+//         console.log('Raw backend response:', rawText);
 
-        if (response.ok) {
-            const result = JSON.parse(rawText);
-            console.log('Order and selection saved successfully:', result);
-        } else {
-            console.error('Error saving order and selection:', rawText);
-        }
-    } catch (error) {
-        console.error('Error saving order and selection:', error);
-    }
-}
+//         if (response.ok) {
+//             const result = JSON.parse(rawText);
+//             console.log('Order and selection saved successfully:', result);
+//         } else {
+//             console.error('Error saving order and selection:', rawText);
+//         }
+//     } catch (error) {
+//         console.error('Error saving order and selection:', error);
+//     }
+// }
 
 // async function saveOrderAndSelectionAfterDrag() {
 //     try {
@@ -537,56 +535,165 @@ async function deleteQuote(quoteId) {
 
 //---------------------------------------Drag-and-Drop Handlers
 
-// Corrected dragStart handler for dragging the entire quoteBox only when clicking the reorderIcon
-
 function handleDragStart(event) {
-    //console.log('Drag started on:', event.target); // Logs the element being dragged
-    draggedItem = event.target.closest('.quote-box'); // Ensure the whole quoteBox is dragged
-    if (draggedItem) {
-        draggedItem.style.opacity = '0.5'; // Visual cue
-        //console.log('Dragged item is:', draggedItem.id); // Confirm the correct box
+    console.log('HandleDragStart called.');
+    draggedItem = event.target.closest('.quote-box'); // Ensure dragging applies to the full quote box
+
+    if (!draggedItem) {
+        console.error("🚨 handleDragStart: No valid quote-box found for dragging.");
+        return;
     }
+
+    console.log("✅ Dragging started on:", draggedItem.id);
+
+    draggedItem.classList.add('dragging'); // Apply dragging style
+    event.dataTransfer.setData('text/plain', draggedItem.id); // ✅ Required for Firefox
+    event.dataTransfer.effectAllowed = 'move';
+
+    setTimeout(() => {
+        draggedItem.style.opacity = '0.5'; // Reduce opacity slightly for visual cue
+    }, 0);
 }
+
+// function handleDragStart(event) {
+//     console.log('HandleDragStart called.');
+//     draggedItem = event.target.closest('.quote-box'); // Ensure dragging applies to the full quote box
+
+//     if (!draggedItem) {
+//         console.error("🚨 handleDragStart: No valid quote-box found for dragging.");
+//         return;
+//     }
+
+//     console.log("✅ Dragging started on:", draggedItem.id);
+
+//     draggedItem.classList.add('dragging'); // Apply dragging style
+//     event.dataTransfer.effectAllowed = 'move';
+
+//     setTimeout(() => {
+//         draggedItem.style.opacity = '0.5'; // Reduce opacity slightly for visual cue
+//     }, 0);
+// }
 
 
 function handleDragOver(event) {
-    event.preventDefault(); // Allow drop
-    //console.log('Drag over target:', event.target.closest('.quote-box')?.id || 'none');
-}
+    console.log('HandleDragOver called.');
+    event.preventDefault(); // ✅ Required to allow dropping
+    console.log("handleDragOver: Dragging over", event.target.closest('.quote-box')?.id || "null");
 
-// Drag end (reset opacity)
-function handleDragEnd() {
-    if (draggedItem) {
-        draggedItem.style.opacity = '1';
-    }
-}
-
-// Updated handleDrop event
-
-async function handleDrop(event) {
-    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move'; // ✅ Required for Firefox
 
     const targetItem = event.target.closest('.quote-box');
-    // console.log('Drop event triggered on:', targetItem?.id || 'none');
-    // console.log('Dragged item:', draggedItem?.id || 'none');
+    if (!targetItem || targetItem === draggedItem) return;
 
-    if (draggedItem && targetItem && draggedItem !== targetItem) {
-        // Reorder visually
-        quotesList.insertBefore(draggedItem, targetItem.nextSibling);
-        //console.log('Dragged item moved to new position');
+    // ✅ Adjust visual positioning smoothly
+    const boundingRect = targetItem.getBoundingClientRect();
+    const offset = event.clientY - boundingRect.top;
 
-        // Save the new order to the backend
-        await saveOrderAndSelectionAfterDrag();
-
-        // Reload quotes to ensure order is updated
-        await loadQuotes();
-    }
-
-    if (draggedItem) {
-        draggedItem.style.opacity = '1'; // Reset opacity
-        draggedItem = null;
+    if (offset > boundingRect.height / 2) {
+        targetItem.parentNode.insertBefore(draggedItem, targetItem.nextSibling);
+    } else {
+        targetItem.parentNode.insertBefore(draggedItem, targetItem);
     }
 }
+
+// function handleDragOver(event) {
+//     console.log('HandleDragOver called.');
+//     event.preventDefault(); // ✅ Allows dropping
+//     const targetItem = event.target.closest('.quote-box');
+//     if (!targetItem || targetItem === draggedItem) return;
+
+//     // ✅ Adjust visual positioning smoothly
+//     const boundingRect = targetItem.getBoundingClientRect();
+//     const offset = event.clientY - boundingRect.top;
+
+//     if (offset > boundingRect.height / 2) {
+//         targetItem.parentNode.insertBefore(draggedItem, targetItem.nextSibling);
+//     } else {
+//         targetItem.parentNode.insertBefore(draggedItem, targetItem);
+//     }
+// }
+
+/* Updated, Cleaned-Up handleDrop with Correct Target Detection */
+async function handleDrop(event) {
+    console.log("HandleDrop called.");
+    event.preventDefault();
+
+    if (!draggedItem) {
+        console.error("handleDrop: draggedItem is null. Ignoring drop event.");
+        return;
+    }
+    console.log("HandleDrop: draggedItem exists:", draggedItem.id);
+
+    // Traverse up the DOM to find the closest .quote-box
+    // let targetItem = event.target;
+    // while (targetItem && !targetItem.classList.contains('quote-box')) {
+    //     targetItem = targetItem.parentElement;
+    // }
+    // Ensure targetItem is a valid .quote-box, stopping at the first one found
+    // Ensure targetItem is a valid .quote-box and not the dragged item
+    let targetItem = event.target;
+    while (targetItem && (!targetItem.classList.contains('quote-box') || targetItem === draggedItem)) {
+        console.log("handleDrop: Traversing up from", targetItem.id || targetItem.tagName);
+        if (!targetItem.parentElement) break; // Stop if there's no more parent elements
+        targetItem = targetItem.parentElement;
+    }
+
+    // Log final determined target
+    console.log("handleDrop: Final drop target determined as:", targetItem ? targetItem.id : "null (invalid target)");
+
+    if (!targetItem || draggedItem === targetItem) {
+        console.error("handleDrop: No valid drop target found. Ignoring drop.");
+        return;
+    }
+    console.log("HandleDrop: Dropping", draggedItem.id, "onto", targetItem.id);
+
+    const draggedQuoteId = draggedItem.id.replace('quote-', '');
+    const targetQuoteId = targetItem.id.replace('quote-', '');
+    const draggedIndex = allQuotes.findIndex(q => q._id === draggedQuoteId);
+    const targetIndex = allQuotes.findIndex(q => q._id === targetQuoteId);
+
+    if (draggedIndex === -1 || targetIndex === -1) {
+        console.error("handleDrop: Could not find dragged or target quote in allQuotes.");
+        return;
+    }
+    console.log("HandleDrop: Found indexes", draggedIndex, targetIndex);
+
+    console.log("HandleDrop: allQuotes BEFORE update:", allQuotes);
+
+    const [draggedQuote] = allQuotes.splice(draggedIndex, 1);
+    allQuotes.splice(targetIndex, 0, draggedQuote);
+
+    console.log("HandleDrop: allQuotes AFTER update:", allQuotes);
+
+    allQuotes.forEach((quote, index) => {
+        quote.position = index;
+    });
+
+    draggedItem.classList.remove('dragging');
+    draggedItem.style.opacity = '1';
+    draggedItem = null;
+    console.log("HandleDrop: draggedItem reset.");
+}
+
+async function handleDragEnd(event) {
+    console.log('HandleDragEnd called.');
+
+    if (!draggedItem) return;
+
+    // Ensure dragged item is visible again
+    draggedItem.style.opacity = '1';
+    draggedItem.classList.remove('dragging');
+
+    console.log('HandleDragEnd: Sending updated quote order to backend.');
+
+    // ✅ Send updated order and selection state to backend
+    await updateQuoteOrderAndSelectionInBackend(allQuotes);
+
+    // Now reset draggedItem
+    draggedItem = null;
+    console.log('HandleDragEnd: draggedItem reset.');
+}
+
 
 
 

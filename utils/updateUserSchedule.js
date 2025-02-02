@@ -18,10 +18,24 @@ import { Schedule } from '/var/www/reQuote/models/Schedule.js';
 //     console.log(`User with ID ${userID} now has ${schedule.selectedQuotes.length} quotes scheduled for email.`);
 // }
 
-export async function updateUserSchedule(userID, userEmail, selected, quoteID) {
+// export async function updateUserSchedule(userID, userEmail, selected, quoteID) {
+//     const update = selected
+//         ? { $addToSet: { selectedQuotes: quoteID } }
+//         : { $pull: { selectedQuotes: quoteID } };
+
+//     const schedule = await Schedule.findOneAndUpdate(
+//         { user: userID },
+//         { ...update, $slice: { selectedQuotes: 21 } },
+//         { new: true, upsert: true }
+//     );
+
+//     console.log(`${userEmail} now has ${schedule.selectedQuotes.length} quotes scheduled for email.`);
+// }
+
+export async function updateUserSchedule(userID, userEmail, selected, quote) {
     const update = selected
-        ? { $addToSet: { selectedQuotes: quoteID } }
-        : { $pull: { selectedQuotes: quoteID } };
+        ? { $addToSet: { selectedQuotes: quote._id } }
+        : { $pull: { selectedQuotes: quote._id } };
 
     const schedule = await Schedule.findOneAndUpdate(
         { user: userID },
@@ -29,5 +43,11 @@ export async function updateUserSchedule(userID, userEmail, selected, quoteID) {
         { new: true, upsert: true }
     );
 
+    // Log when a quote is selected or deselected
+    console.log(
+        `${userEmail} has ${selected ? 'selected' : 'deselected'} "${truncateQuoteContent(quote.content)}" for email schedule.`
+    );
+
+    // Log the count of selected quotes
     console.log(`${userEmail} now has ${schedule.selectedQuotes.length} quotes scheduled for email.`);
 }

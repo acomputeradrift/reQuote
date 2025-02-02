@@ -140,6 +140,18 @@ h1 {
     overflow: hidden; /* Ensure no content spills outside */
 }
 
+.quote-box {
+    transition: transform 0.2s ease-in-out, opacity 0.2s;
+}
+
+.quote-box.dragging {
+    transform: scale(1.05); /* Slightly enlarge while dragging */
+    opacity: 0.7; /* Reduce opacity */
+    z-index: 1000; /* Ensure it stays above other elements */
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2); /* Add shadow for depth */
+}
+
+
 /* Style for the leftButtonContainer */
 .leftButtonContainer {
     width: 40px; /* Fixed width for the left button container */

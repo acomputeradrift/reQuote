@@ -318,85 +318,85 @@ app.delete('/quotes/:id', authenticate, async (req, res) => {
 });
 
 //This won't be used
-app.patch('/quotes/:id/selection', authenticate, async (req, res) => {
+// app.patch('/quotes/:id/selection', authenticate, async (req, res) => {
 
-    //---------------------------3 queries to the database 
-    // --------(find the Quote / get current state, count selected Quotes, get updated state)
+//     //---------------------------3 queries to the database 
+//     // --------(find the Quote / get current state, count selected Quotes, get updated state)
 
-    //!! Really all we have to do here is push the allQuotes array to the backend as is
-    const { id } = req.params;
-    const { selected } = req.body; // this is simply a true/false
+//     //!! Really all we have to do here is push the allQuotes array to the backend as is
+//     const { id } = req.params;
+//     const { selected } = req.body; // this is simply a true/false
 
-    if (typeof selected !== 'boolean') {
-        return res.status(400).json({ message: 'Invalid selection value. Must be true or false.' });
-    }
+//     if (typeof selected !== 'boolean') {
+//         return res.status(400).json({ message: 'Invalid selection value. Must be true or false.' });
+//     }
 
-    try {
-        console.log('----QUOTE SELECTION MODIFICATION SENT FROM THE FRONTEND----')
-        // Step 1: Find the quote by ID in the database and ensure it belongs to the authenticated user
-        const currentQuote = await Quote.findOne({ _id: id, user: req.userId }).populate('user', 'email');
-        if (!currentQuote) {
-            return res.status(404).json({ message: 'Quote not found' });
-        }
-        console.log(`In the database, quote ${currentQuote._id} has a current selected state of ${currentQuote.selected}.`);
+//     try {
+//         console.log('----QUOTE SELECTION MODIFICATION SENT FROM THE FRONTEND----')
+//         // Step 1: Find the quote by ID in the database and ensure it belongs to the authenticated user
+//         const currentQuote = await Quote.findOne({ _id: id, user: req.userId }).populate('user', 'email');
+//         if (!currentQuote) {
+//             return res.status(404).json({ message: 'Quote not found' });
+//         }
+//         console.log(`In the database, quote ${currentQuote._id} has a current selected state of ${currentQuote.selected}.`);
 
-        // Step 2: If selecting, test the 21-quote limit
-        if (selected) {
-            console.log('Request received to change quote selection state to true.')
-            const result = await testEmailLimit(currentQuote);
-            if (!result.approved) {
-                console.log(result.message);
-            }
+//         // Step 2: If selecting, test the 21-quote limit
+//         if (selected) {
+//             console.log('Request received to change quote selection state to true.')
+//             const result = await testEmailLimit(currentQuote);
+//             if (!result.approved) {
+//                 console.log(result.message);
+//             }
 
-            // const selectedQuotesCount = await Quote.countDocuments({ user: req.userId, selected: true });
-            // console.log(`This user currently has ${selectedQuotesCount} selected quotes.`);
-            // if (selectedQuotesCount >= 21) {
-            //     console.log('NOT Approved.');
-            //     return res.status(400).json({ message: 'You can only select up to 21 quotes.' });
-            // }
-            //  else {
-            //     console.log('Approved.')
-            // }
-        } else {
-            console.log('Changing quote selection state to false.')
-        }
-        // Step 3: Update the quote's `selected` field
-        currentQuote.selected = selected;
+//             // const selectedQuotesCount = await Quote.countDocuments({ user: req.userId, selected: true });
+//             // console.log(`This user currently has ${selectedQuotesCount} selected quotes.`);
+//             // if (selectedQuotesCount >= 21) {
+//             //     console.log('NOT Approved.');
+//             //     return res.status(400).json({ message: 'You can only select up to 21 quotes.' });
+//             // }
+//             //  else {
+//             //     console.log('Approved.')
+//             // }
+//         } else {
+//             console.log('Changing quote selection state to false.')
+//         }
+//         // Step 3: Update the quote's `selected` field
+//         currentQuote.selected = selected;
     
-        // Save the updated quote to the database
-        await currentQuote.save();
-        //console.log(`Updated quote selection saved to the database.`);
-        const updatedQuote = await Quote.findOne({ _id: id, user: req.userId }).populate('user', 'email');
-        if (!updatedQuote) {
-            return res.status(404).json({ message: 'Quote not found' });
-        }
-        console.log(`In the database, quote ${updatedQuote._id} now has an updated selection state of ${updatedQuote.selected}`);
-        //Log it
-        const truncatedContent = truncateQuoteContent(currentQuote.content);
-        console.log(
-            `${currentQuote.user.email} has successfully ${currentQuote.selected ? 'selected' : 'deselected'} the quote "${truncatedContent}" for scheduled email.`
-        );
-        // Call the updateUserSchedule function
-        await updateUserSchedule(updatedQuote.user._id, updatedQuote.user.email,  updatedQuote.selected, updatedQuote._id);
-        // Reorder the database
-        //await reorderUserQuotes(updatedQuote.user._id);
+//         // Save the updated quote to the database
+//         await currentQuote.save();
+//         //console.log(`Updated quote selection saved to the database.`);
+//         const updatedQuote = await Quote.findOne({ _id: id, user: req.userId }).populate('user', 'email');
+//         if (!updatedQuote) {
+//             return res.status(404).json({ message: 'Quote not found' });
+//         }
+//         console.log(`In the database, quote ${updatedQuote._id} now has an updated selection state of ${updatedQuote.selected}`);
+//         //Log it
+//         const truncatedContent = truncateQuoteContent(currentQuote.content);
+//         console.log(
+//             `${currentQuote.user.email} has successfully ${currentQuote.selected ? 'selected' : 'deselected'} the quote "${truncatedContent}" for scheduled email.`
+//         );
+//         // Call the updateUserSchedule function
+//         await updateUserSchedule(updatedQuote.user._id, updatedQuote.user.email,  updatedQuote.selected, updatedQuote._id);
+//         // Reorder the database
+//         //await reorderUserQuotes(updatedQuote.user._id);
 
-        // Respond to the client
-        res.status(200).json({ 
-            message: 'Quote selection updated successfully.', 
-            quote: { 
-                _id: updatedQuote._id, 
-                selected: updatedQuote.selected 
-            } 
-        });
+//         // Respond to the client
+//         res.status(200).json({ 
+//             message: 'Quote selection updated successfully.', 
+//             quote: { 
+//                 _id: updatedQuote._id, 
+//                 selected: updatedQuote.selected 
+//             } 
+//         });
         
-        //res.status(200).json({ message: 'Quote selection updated successfully.', quote });
+//         //res.status(200).json({ message: 'Quote selection updated successfully.', quote });
 
-    } catch (error) {
-        console.error('Error updating quote selection:', error);
-        res.status(500).json({ message: 'Failed to update quote selection.' });
-    }
-});
+//     } catch (error) {
+//         console.error('Error updating quote selection:', error);
+//         res.status(500).json({ message: 'Failed to update quote selection.' });
+//     }
+// });
 
 //!!
 app.post('/quotes/update-order-and-selection', async (req, res) => {
@@ -429,6 +429,7 @@ app.post('/quotes/update-order-and-selection', async (req, res) => {
             console.log(`✅ Successfully updated ${bulkUpdates.length} quotes for user ${userId}.`);
         }
 
+        
         // Call sorting function to reorder quotes
         await reorderUserQuotes(userId);
 
